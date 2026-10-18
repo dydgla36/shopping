@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관심 상품</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#111;text-decoration:none}a:hover{color:#6b6b6b}
+.nav a{font:700 13px/1 Archivo,sans-serif;letter-spacing:.06em}
+.btn{display:block;text-align:center;padding:17px 28px;font:700 13px Archivo,sans-serif;letter-spacing:.08em}
+.lbl{font:700 12px Archivo,sans-serif;letter-spacing:.1em;color:#767676;margin:28px 0 10px}
+.opt{position:absolute;opacity:0}
+.opt+label{display:inline-block;min-width:48px;text-align:center;padding:12px 14px;border:1px solid #ccc;margin:0 6px 6px 0;font:500 13px Archivo,sans-serif;cursor:pointer}
+.opt:checked+label{border-color:#111;background:#111;color:#fff}
+.opt:focus-visible+label{outline:2px solid #111;outline-offset:2px}
+.card{display:block}.ph{aspect-ratio:4/5;background:#e6e3de}
+.card b{display:block;margin-top:12px;font:400 12px Archivo,sans-serif;color:#767676}
+.card span{display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif}
+.card i{display:block;margin-top:6px;font:700 14px Archivo,sans-serif;font-style:normal}
+.fld{display:block;margin-top:18px;font:500 13px 'Noto Sans KR',sans-serif}
+.fld input{display:block;box-sizing:border-box;width:100%;margin-top:8px;padding:15px 14px;border:1px solid #ccc;font:400 15px 'Noto Sans KR',sans-serif}
+</style>
+</head>
+<body>
+<div style="width:100%;max-width:1440px;margin:0 auto;background:#fff;color:#111;font-family:'Noto Sans KR',sans-serif">
+<header style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:22px 60px;border-bottom:1px solid #e5e5e5">
+<a href="index.html" style="font:800 32px/1 Archivo,sans-serif;letter-spacing:.08em">GABBY</a>
+<nav class="nav" style="display:flex;flex-wrap:wrap;gap:28px"><a href="List.html">BEST</a><a href="List_New.html">NEW 7%</a><a href="List_Men.html">MEN</a><a href="List_Women.html">WOMEN</a><a href="About.html">ABOUT</a></nav>
+<div class="nav" style="display:flex;gap:22px"><a href="Review.html">REVIEW</a><a href="QnA.html">Q&amp;A</a><a href="Notice.html">NOTICE</a><a href="Search.html">SEARCH</a><a href="Login.html">LOGIN</a><a href="MyPage.html">MY PAGE</a><a href="Cart.html">CART (0)</a></div>
+</header>
+<div style="padding:24px 60px 0;font-size:12px;color:#767676"><a href="index.html" style="color:#767676">HOME</a> &gt; <a href="MyPage.html" style="color:#767676">MY PAGE</a> &gt; WISHLIST</div>
+<section style="padding:20px 60px 0"><h1 style="margin:0;font:800 40px Archivo,sans-serif;letter-spacing:.04em">WISHLIST</h1>
+<p style="margin:10px 0 0;font-size:14px;color:#555">관심 상품 <b>[0]</b>개</p>
+<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:28px;padding:16px 0;border-top:1px solid #111;border-bottom:1px solid #e5e5e5;font-size:13px"><span style="display:flex;gap:18px"><a href="#" style="font-weight:700">전체 선택</a><a href="#" style="color:#767676">선택 삭제</a></span><a href="Cart.html" style="font-weight:700;border-bottom:1px solid #111">전체 상품 장바구니 담기</a></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:40px 20px;margin-top:32px"><div class="card"><a href="Product.html" style="display:block"><div class="ph" style="background:#e6e3de"></div></a><b>[브랜드명]</b><a href="Product.html" style="display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif">부클 벨티드 코트</a><i>₩276,000</i><div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px"><a href="Cart.html" style="text-align:center;padding:12px;border:1px solid #111;font:700 12px Archivo,sans-serif;letter-spacing:.08em">ADD TO CART</a><a href="#" style="padding:12px 16px;border:1px solid #ccc;font-size:12px;color:#555">삭제</a></div></div><div class="card"><a href="Product.html" style="display:block"><div class="ph" style="background:#ddd8d0"></div></a><b>[브랜드명]</b><a href="Product.html" style="display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif">데님 셔츠</a><i>₩145,000</i><div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px"><a href="Cart.html" style="text-align:center;padding:12px;border:1px solid #111;font:700 12px Archivo,sans-serif;letter-spacing:.08em">ADD TO CART</a><a href="#" style="padding:12px 16px;border:1px solid #ccc;font-size:12px;color:#555">삭제</a></div></div><div class="card"><a href="Product.html" style="display:block"><div class="ph" style="background:#d6d6d6"></div></a><b>[브랜드명]</b><a href="Product.html" style="display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif">레더 재킷</a><i>₩194,000</i><div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px"><a href="Cart.html" style="text-align:center;padding:12px;border:1px solid #111;font:700 12px Archivo,sans-serif;letter-spacing:.08em">ADD TO CART</a><a href="#" style="padding:12px 16px;border:1px solid #ccc;font-size:12px;color:#555">삭제</a></div></div><div class="card"><a href="Product.html" style="display:block"><div class="ph" style="background:#dcdcdc"></div></a><b>[브랜드명]</b><a href="Product.html" style="display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif">헨리넥 니트</a><i>₩80,000</i><div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px"><a href="Cart.html" style="text-align:center;padding:12px;border:1px solid #111;font:700 12px Archivo,sans-serif;letter-spacing:.08em">ADD TO CART</a><a href="#" style="padding:12px 16px;border:1px solid #ccc;font-size:12px;color:#555">삭제</a></div></div><div class="card"><a href="Product.html" style="display:block"><div class="ph" style="background:#ddd8d0"></div></a><b>[브랜드명]</b><a href="Product.html" style="display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif">밀리터리 셋업</a><i>₩119,000</i><div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px"><a href="Cart.html" style="text-align:center;padding:12px;border:1px solid #111;font:700 12px Archivo,sans-serif;letter-spacing:.08em">ADD TO CART</a><a href="#" style="padding:12px 16px;border:1px solid #ccc;font-size:12px;color:#555">삭제</a></div></div><div class="card"><a href="Product.html" style="display:block"><div class="ph" style="background:#d6d6d6"></div></a><b>[브랜드명]</b><a href="Product.html" style="display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif">와이드 팬츠</a><i>₩101,000</i><div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px"><a href="Cart.html" style="text-align:center;padding:12px;border:1px solid #111;font:700 12px Archivo,sans-serif;letter-spacing:.08em">ADD TO CART</a><a href="#" style="padding:12px 16px;border:1px solid #ccc;font-size:12px;color:#555">삭제</a></div></div></div><div style="display:flex;justify-content:center;gap:8px;margin-top:56px"><a href="#" style="min-width:40px;padding:10px 0;text-align:center;font:700 14px Archivo,sans-serif;border-bottom:2px solid #111">1</a><a href="#" style="min-width:40px;padding:10px 0;text-align:center;font:700 14px Archivo,sans-serif;color:#767676">2</a><a href="#" style="min-width:40px;padding:10px 0;text-align:center;font:700 14px Archivo,sans-serif;color:#767676">3</a><a href="#" style="min-width:40px;padding:10px 0;text-align:center;font:700 14px Archivo,sans-serif;color:#767676">4</a><a href="#" style="min-width:40px;padding:10px 0;text-align:center;font:700 14px Archivo,sans-serif;color:#767676">→</a></div></section>
+<footer style="margin-top:96px;background:#111;padding:48px 60px;font:400 13px/1.8 'Noto Sans KR',sans-serif;color:#cfcfcf"><div style="font:800 28px Archivo,sans-serif;letter-spacing:.08em;color:#fff">GABBY</div>[상호명] · 대표 [이름] · [사업자등록번호] · [통신판매업 신고번호] · [주소] · [고객센터 전화번호]</footer>
+</div>
+</body>
+</html>
