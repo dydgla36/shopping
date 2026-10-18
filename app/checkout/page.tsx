@@ -54,7 +54,7 @@ export default async function Page() {
               결제 수단
             </div>
             <div style={{ marginTop: "20px" }}>
-              <input className="opt" type="radio" name="pay" id="p1" defaultChecked="" />
+              <input className="opt" type="radio" name="pay" id="p1" defaultChecked />
               <label htmlFor="p1">
                 신용카드
               </label>
