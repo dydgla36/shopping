@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // (장바구니는 로그인 없이 볼 수 있고, 결제 단계부터 로그인이 필요합니다.)
 const PROTECTED = [
   "/mypage", "/claims", "/points", "/coupons", "/wishlist", "/profile-edit",
-  "/order-detail", "/order-complete", "/checkout", "/review/write", "/qna/write",
+  "/order-detail", "/order-complete", "/checkout", "/review/write", "/qna/write", "/admin",
 ];
 
 // 1차 확인: 로그인 쿠키가 아예 없으면 바로 로그인 화면으로 보냅니다.

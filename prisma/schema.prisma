@@ -31,6 +31,7 @@ model User {
   name           String
   email          String   @unique
   phone          String
+  role           String   @default("USER") // USER 일반 회원 / ADMIN 관리자
   marketingOptIn Boolean  @default(false) // [선택] 마케팅 정보 수신 동의
   termsAgreedAt  DateTime // [필수] 이용약관·개인정보 수집 동의 시각
   createdAt      DateTime @default(now())
@@ -70,6 +71,8 @@ model Order {
   address        String
   addressDetail  String?
   deliveryMemo   String?
+  carrier        String? // 택배사
+  trackingNumber String? // 운송장 번호
   items          OrderItem[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt

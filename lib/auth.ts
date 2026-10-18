@@ -41,7 +41,14 @@ export async function getCurrentUser() {
   try {
     const session = await prisma.session.findUnique({ where: { id }, include: { user: true } });
     if (!session || session.expiresAt < new Date()) return null;
-    return { id: session.user.id, name: session.user.name, loginId: session.user.loginId };
+    return {
+      id: session.user.id,
+      name: session.user.name,
+      loginId: session.user.loginId,
+      email: session.user.email,
+      phone: session.user.phone,
+      role: session.user.role,
+    };
   } catch (e) {
     console.error("세션 조회 실패:", e);
     return null;

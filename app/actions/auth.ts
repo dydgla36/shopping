@@ -64,17 +64,20 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
   const next = safeNext(str(formData, "next"));
   if (!loginId || !password) return { error: "아이디와 비밀번호를 입력해 주세요." };
 
+  let isAdmin = false;
   try {
     const user = await prisma.user.findUnique({ where: { loginId } });
     // 아이디가 없어도 같은 시간이 걸리도록 해시 계산을 한 번 합니다.
     const ok = user ? verifyPassword(password, user.passwordHash) : (hashPassword(password), false);
     if (!user || !ok) return { error: "아이디 또는 비밀번호가 올바르지 않아요." };
-    await createSession(user.id, remember ? 30 : 1);
+    isAdmin = user.role === "ADMIN";
+    // 관리자 로그인은 항상 1일만 유지합니다.
+    await createSession(user.id, isAdmin ? 1 : remember ? 30 : 1);
   } catch (e) {
     console.error("로그인 실패:", e);
     return { error: "로그인 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." };
   }
-  redirect(next);
+  redirect(isAdmin && next === "/" ? "/admin" : next);
 }
 
 export async function logout() {

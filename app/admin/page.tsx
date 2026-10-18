@@ -1,0 +1,56 @@
+import Link from "next/link";
+import { prisma } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin";
+import { STATUS_LABEL, fmtDate, won } from "@/lib/orders";
+import { bodyRow, card, cardLabel, cardValue, h2, headRow } from "./styles";
+
+export default async function Page() {
+  await requireAdmin();
+  // 한국 시간 기준 오늘 0시
+  const kst = new Date(Date.now() + 9 * 3600 * 1000);
+  kst.setUTCHours(0, 0, 0, 0);
+  const todayStart = new Date(kst.getTime() - 9 * 3600 * 1000);
+
+  const [today, total, sum, waiting, members, recent] = await Promise.all([
+    prisma.order.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.order.count(),
+    prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: "CANCELED" } } }),
+    prisma.order.count({ where: { status: { in: ["PENDING", "PAID", "PREPARING"] } } }),
+    prisma.user.count({ where: { role: "USER" } }),
+    prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 5, include: { items: true } }),
+  ]);
+  const cols = "100px 150px 1fr 110px 90px";
+
+  return (
+    <>
+      <h2 style={h2}>대시보드</h2>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginTop: 20 }}>
+        <div style={card}><div style={cardLabel}>오늘 주문</div><div style={cardValue}>{today}</div></div>
+        <div style={card}><div style={cardLabel}>배송 처리 대기</div><div style={cardValue}>{waiting}</div></div>
+        <div style={card}><div style={cardLabel}>전체 주문</div><div style={cardValue}>{total}</div></div>
+        <div style={card}><div style={cardLabel}>회원 수</div><div style={cardValue}>{members}</div></div>
+        <div style={{ ...card, flexBasis: 260 }}><div style={cardLabel}>주문 금액 합계 (취소 제외)</div><div style={cardValue}>{won(sum._sum.total ?? 0)}</div></div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 44 }}>
+        <h2 style={{ ...h2, fontSize: 18 }}>최근 주문</h2>
+        <Link href="/admin/orders" style={{ fontSize: 13, borderBottom: "1px solid #111" }}>전체 보기</Link>
+      </div>
+      <div style={{ overflowX: "auto", marginTop: 14 }}>
+        <div style={{ minWidth: 600, borderTop: "1px solid #111" }}>
+          <div style={headRow(cols)}><span>주문일</span><span>주문번호</span><span>받는 사람</span><span>금액</span><span>상태</span></div>
+          {recent.length === 0 && <div style={{ padding: "28px 12px", fontSize: 14, color: "#767676" }}>아직 주문이 없어요.</div>}
+          {recent.map((o) => (
+            <div key={o.id} style={bodyRow(cols)}>
+              <span style={{ color: "#767676" }}>{fmtDate(o.createdAt)}</span>
+              <Link href={`/admin/orders/${o.orderNumber}`} style={{ borderBottom: "1px solid #ccc", width: "fit-content" }}>{o.orderNumber}</Link>
+              <span>{o.recipientName}</span>
+              <span style={{ fontFamily: "Archivo,sans-serif" }}>{won(o.total)}</span>
+              <span style={{ fontWeight: 700 }}>{STATUS_LABEL[o.status] ?? o.status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}

@@ -17,6 +17,7 @@ export default async function Header() {
     ["Q&A", "/qna"],
     ["NOTICE", "/notice"],
     ["SEARCH", "/search"],
+    ...(user?.role === "ADMIN" ? [["ADMIN", "/admin"]] : []),
     ...(user ? [] : [["LOGIN", "/login"]]),
     ["MY PAGE", "/mypage"],
     ["CART (0)", "/cart"],
