@@ -17,6 +17,7 @@ model Product {
   sale      String?
   position  Int      @default(0)
   createdAt DateTime @default(now())
+  orderItems OrderItem[]
 
   @@unique([category, name])
   @@index([category, position])
@@ -35,6 +36,7 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   sessions       Session[]
+  orders         Order[]
 }
 
 // 로그인 상태 (브라우저 쿠키에 id를 저장하고, 이 테이블에서 확인합니다)
@@ -46,4 +48,47 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// 주문 (결제 한 번 = 한 줄). 받는 사람·금액 등은 주문 당시 값을 그대로 저장합니다.
+model Order {
+  id             Int         @id @default(autoincrement())
+  orderNumber    String      @unique // 화면에 보여줄 주문번호
+  userId         Int
+  user           User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  status         String      @default("PENDING") // PENDING 접수 / PAID 결제 완료 / PREPARING 배송 준비 / SHIPPING 배송 중 / DELIVERED 배송 완료 / CANCELED 취소
+  paymentMethod  String // 신용카드, 계좌이체, 무통장입금, 카카오페이
+  itemsTotal     Int // 상품금액 합계
+  shippingFee    Int         @default(0)
+  discount       Int         @default(0)
+  total          Int // 최종 결제 금액
+  ordererName    String // 주문자
+  ordererPhone   String
+  ordererEmail   String
+  recipientName  String // 받는 사람
+  recipientPhone String
+  address        String
+  addressDetail  String?
+  deliveryMemo   String?
+  items          OrderItem[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+// 주문에 담긴 상품 (상품 하나 = 한 줄). 상품이 나중에 바뀌어도 주문 내역은 그대로 남도록 이름·가격을 복사해 둡니다.
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  price     Int // 구매 당시 한 개 가격
+  quantity  Int      @default(1)
+  color     String?
+  size      String?
+
+  @@index([orderId])
 }
