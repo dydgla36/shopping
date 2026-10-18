@@ -58,7 +58,7 @@ export default function Page() {
             <label htmlFor="s1">
               S
             </label>
-            <input className="opt" type="radio" name="sz" id="s2" defaultChecked="" />
+            <input className="opt" type="radio" name="sz" id="s2" defaultChecked />
             <label htmlFor="s2">
               M
             </label>
