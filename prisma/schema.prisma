@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Product {
+  id        Int      @id @default(autoincrement())
+  category  String
+  name      String
+  price     Int
+  bg        String   @default("#e6e3de")
+  sale      String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([category, name])
+  @@index([category, position])
+}
+
+// 회원 (회원가입 화면의 입력 항목과 맞춰 두었습니다)
+model User {
+  id             Int      @id @default(autoincrement())
+  loginId        String   @unique // 아이디
+  passwordHash   String // 비밀번호는 원문이 아니라 bcrypt 같은 방식으로 암호화한 값만 저장합니다
+  name           String
+  email          String   @unique
+  phone          String
+  marketingOptIn Boolean  @default(false) // [선택] 마케팅 정보 수신 동의
+  termsAgreedAt  DateTime // [필수] 이용약관·개인정보 수집 동의 시각
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  sessions       Session[]
+}
+
+// 로그인 상태 (브라우저 쿠키에 id를 저장하고, 이 테이블에서 확인합니다)
+model Session {
+  id        String   @id @default(cuid())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

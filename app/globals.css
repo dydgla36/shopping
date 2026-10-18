@@ -1,0 +1,26 @@
+body{margin:0}
+a{color:#111;text-decoration:none}a:hover{color:#6b6b6b}
+.nav a{font:700 13px/1 Archivo,sans-serif;letter-spacing:.06em}
+.btn{display:block;text-align:center;padding:17px 28px;font:700 13px Archivo,sans-serif;letter-spacing:.08em}
+.lbl{font:700 12px Archivo,sans-serif;letter-spacing:.1em;color:#767676;margin:28px 0 10px}
+.opt{position:absolute;opacity:0}
+.opt+label{display:inline-block;min-width:48px;text-align:center;padding:12px 14px;border:1px solid #ccc;margin:0 6px 6px 0;font:500 13px Archivo,sans-serif;cursor:pointer}
+.opt:checked+label{border-color:#111;background:#111;color:#fff}
+.opt:focus-visible+label{outline:2px solid #111;outline-offset:2px}
+.card{display:block}.ph{aspect-ratio:4/5;background:#e6e3de}
+.card b{display:block;margin-top:12px;font:400 12px Archivo,sans-serif;color:#767676}
+.card span{display:block;margin-top:4px;font:500 14px/1.4 'Noto Sans KR',sans-serif}
+.card i{display:block;margin-top:6px;font:700 14px Archivo,sans-serif;font-style:normal}
+.fld{display:block;margin-top:18px;font:500 13px 'Noto Sans KR',sans-serif}
+.fld input{display:block;box-sizing:border-box;width:100%;margin-top:8px;padding:15px 14px;border:1px solid #ccc;font:400 15px 'Noto Sans KR',sans-serif}
+.sec{padding:72px 60px 0}
+.sh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:28px}
+.sh h2{margin:0;font:800 30px/1 Archivo,sans-serif;letter-spacing:.02em}
+.sh a{font:500 13px 'Noto Sans KR',sans-serif;border-bottom:1px solid #111}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:28px 20px}
+.card em{font-style:normal;margin-right:6px}
+.foot a{display:block;margin-top:10px;font:400 13px 'Noto Sans KR',sans-serif;color:#cfcfcf}
+.foot a:hover{color:#fff}
+.nav button{font:700 13px/1 Archivo,sans-serif;letter-spacing:.06em;background:none;border:0;padding:0;color:#111;cursor:pointer}
+.nav button:hover{color:#6b6b6b}
+.btn:disabled{opacity:.6;cursor:default}
