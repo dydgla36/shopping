@@ -8,7 +8,7 @@ export default async function Page() {
   return (
     <>
       <section style={{ maxWidth: "560px", margin: "0 auto", padding: "80px 24px 0", textAlign: "center" }}>
-        <svg width="64" height="64" viewbox="0 0 64 64" fill="none" aria-hidden="true">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
           <circle cx="32" cy="32" r="30" stroke="#111" strokeWidth="2">
           </circle>
           <path d="M19 33l9 9 17-19" stroke="#111" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
