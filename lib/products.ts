@@ -15,7 +15,7 @@ export async function getProducts(slug: string): Promise<Item[]> {
       orderBy: { position: "asc" },
     });
     if (rows.length === 0) return fallback;
-    return rows.map((r) => ({ name: r.name, price: won(r.price), bg: r.bg, sale: r.sale ?? undefined }));
+    return rows.map((r) => ({ id: r.id, name: r.name, price: won(r.price), bg: r.bg, sale: r.sale ?? undefined, imageUrl: r.imageUrl ?? undefined }));
   } catch (e) {
     console.error("DB 조회에 실패해 샘플 데이터로 대신합니다:", e);
     return fallback;

@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { createOrder } from "@/app/actions/order";
 
-type Item = { name: string; option: string; priceText: string; bg: string };
+type Item = { name: string; option: string; quantity: number; priceText: string; bg: string };
 type Props = {
   items: Item[];
   itemsTotalText: string;
@@ -11,18 +11,22 @@ type Props = {
   discountText: string;
   totalText: string;
   defaults: { name: string; phone: string; email: string };
+  hidden: { productId: string; size: string; qty: string };
 };
 
 const heading = { font: "800 16px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".06em" } as const;
 const sec = { marginTop: 44, paddingBottom: 14, borderBottom: "1px solid #111", ...heading } as const;
 const row = { display: "flex", justifyContent: "space-between", marginTop: 14, fontSize: 14 } as const;
 
-export default function CheckoutForm({ items, itemsTotalText, shippingText, discountText, totalText, defaults }: Props) {
+export default function CheckoutForm({ items, itemsTotalText, shippingText, discountText, totalText, defaults, hidden }: Props) {
   const [state, action, pending] = useActionState(createOrder, undefined);
 
   return (
     <form action={action} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 56, marginTop: 8, alignItems: "start" }}>
       <div>
+        <input type="hidden" name="productId" value={hidden.productId} />
+        <input type="hidden" name="size" value={hidden.size} />
+        <input type="hidden" name="qty" value={hidden.qty} />
         <div style={sec}>주문자 정보</div>
         <label className="fld">이름<input name="ordererName" type="text" defaultValue={defaults.name} placeholder="이름을 입력하세요" required /></label>
         <label className="fld">휴대전화<input name="ordererPhone" type="tel" defaultValue={defaults.phone} placeholder="010-0000-0000" required /></label>
@@ -56,7 +60,7 @@ export default function CheckoutForm({ items, itemsTotalText, shippingText, disc
             <div style={{ aspectRatio: "4/5", background: it.bg }} />
             <div>
               <div style={{ fontSize: 14 }}>{it.name}</div>
-              <div style={{ marginTop: 4, fontSize: 12, color: "#767676" }}>{it.option} / 수량 1</div>
+              <div style={{ marginTop: 4, fontSize: 12, color: "#767676" }}>{[it.option, `수량 ${it.quantity}`].filter(Boolean).join(" / ")}</div>
             </div>
             <div style={{ font: "800 14px Archivo,sans-serif" }}>{it.priceText}</div>
           </div>

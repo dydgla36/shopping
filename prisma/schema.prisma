@@ -14,6 +14,8 @@ model Product {
   name      String
   price     Int
   bg        String   @default("#e6e3de")
+  imageUrl  String? // 상품 이미지 주소 (없으면 배경색만 보여줍니다)
+  description String? // 상품 설명 (상품 상세 페이지에 보입니다)
   sale      String?
   position  Int      @default(0)
   createdAt DateTime @default(now())

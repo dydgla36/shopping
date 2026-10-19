@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { randomInt } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { CHECKOUT_ITEMS, DISCOUNT, SHIPPING_FEE } from "@/lib/orders";
+import { DISCOUNT, SHIPPING_FEE } from "@/lib/orders";
+import { resolveLines } from "@/lib/checkout";
 import type { FormState } from "@/app/actions/auth";
 
 const PAYMENTS = ["신용카드", "계좌이체", "무통장입금", "카카오페이"];
@@ -28,7 +29,10 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   if (!PAYMENTS.includes(paymentMethod)) return { error: "결제 수단을 선택해 주세요." };
   if (formData.get("agree") !== "on") return { error: "주문 내용 확인 및 결제 동의에 체크해 주세요." };
 
-  const itemsTotal = CHECKOUT_ITEMS.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  // 주문할 상품과 가격은 브라우저가 보낸 값이 아니라 서버(DB)에서 다시 확인합니다.
+  const lines = await resolveLines({ product: s("productId") || undefined, size: s("size") || undefined, qty: s("qty") || undefined });
+  if (!lines) return { error: "주문할 상품을 찾을 수 없어요." };
+  const itemsTotal = lines.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const total = itemsTotal + SHIPPING_FEE - DISCOUNT;
   const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const orderNumber = `G${ymd}-${randomInt(10000, 100000)}`;
@@ -53,7 +57,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
         addressDetail: addressDetail || null,
         deliveryMemo: deliveryMemo || null,
         items: {
-          create: CHECKOUT_ITEMS.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity, color: i.color, size: i.size })),
+          create: lines.map((i) => ({ name: i.name, price: i.price, quantity: i.quantity, color: i.color, size: i.size, productId: i.productId })),
         },
       },
     });

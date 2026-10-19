@@ -1,4 +1,4 @@
-export type Item = { name: string; price: string; bg: string; sale?: string };
+export type Item = { id?: number; name: string; price: string; bg: string; sale?: string; imageUrl?: string };
 export type ListConfig = { title: string; sub: string; chips: string[]; items: Item[] };
 
 const G = "#e6e3de", B = "#ddd8d0", D = "#d6d6d6", L = "#dcdcdc";

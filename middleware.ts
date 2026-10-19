@@ -16,7 +16,7 @@ export function middleware(req: NextRequest) {
   if (needsLogin && !req.cookies.get("session")) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    url.search = `?next=${encodeURIComponent(pathname)}`;
+    url.search = `?next=${encodeURIComponent(pathname + req.nextUrl.search)}`;
     return NextResponse.redirect(url);
   }
   return NextResponse.next();
