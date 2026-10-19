@@ -97,3 +97,12 @@ model OrderItem {
 
   @@index([orderId])
 }
+
+// 상품 이미지 파일 (DB에 직접 저장). 상품의 imageUrl에는 "/api/product-image/이미지번호" 주소가 들어갑니다.
+model ProductImage {
+  id        String   @id @default(cuid())
+  mime      String // image/jpeg, image/png, image/webp, image/gif
+  size      Int // 바이트
+  data      Bytes
+  createdAt DateTime @default(now())
+}
