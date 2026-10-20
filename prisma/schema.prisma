@@ -23,6 +23,7 @@ model Product {
   cartItems  CartItem[]
   wishlist   WishlistItem[]
   stocks     ProductStock[]
+  reviews    Review[]
 
   @@unique([category, name])
   @@index([category, position])
@@ -45,6 +46,12 @@ model User {
   orders         Order[]
   cartItems      CartItem[]
   wishlist       WishlistItem[]
+  reviews        Review[]
+  questions      Question[]
+  claims         Claim[]
+  userCoupons    UserCoupon[]
+  pointLogs      PointLog[]
+  resets         PasswordReset[]
 }
 
 // 로그인 상태 (브라우저 쿠키에 id를 저장하고, 이 테이블에서 확인합니다)
@@ -78,6 +85,9 @@ model Order {
   address        String
   addressDetail  String?
   deliveryMemo   String?
+  pointsUsed     Int         @default(0) // 사용한 적립금
+  userCouponId   Int? // 사용한 쿠폰 (취소하면 되돌려 줍니다)
+  claims         Claim[]
   carrier        String? // 택배사
   trackingNumber String? // 운송장 번호
   items          OrderItem[]
@@ -150,4 +160,113 @@ model ProductStock {
   quantity  Int     @default(0)
 
   @@unique([productId, size])
+}
+
+// 구매 후기 (상품을 구매한 회원만, 상품당 1개)
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int // 1~5
+  content   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([productId, createdAt])
+}
+
+// 문의 게시판 (관리자가 답변을 남깁니다)
+model Question {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   String // 상품 문의, 배송 문의, 교환/반품, 기타
+  title      String
+  content    String
+  secret     Boolean   @default(false)
+  answer     String?
+  answeredAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+// 공지사항
+model Notice {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// 취소·반품·교환 신청
+model Claim {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      String // CANCEL 취소 / RETURN 반품 / EXCHANGE 교환
+  reason    String
+  status    String   @default("RECEIVED") // RECEIVED 접수 / PROCESSING 처리 중 / DONE 완료 / REJECTED 거절
+  adminNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([orderId])
+}
+
+// 쿠폰 (관리자가 만들고, 회원이 쿠폰 번호로 등록합니다)
+model Coupon {
+  id        Int          @id @default(autoincrement())
+  code      String       @unique
+  name      String
+  kind      String // PERCENT 정률(%) / AMOUNT 정액(원)
+  value     Int
+  minOrder  Int          @default(0)
+  expiresAt DateTime?
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  users     UserCoupon[]
+}
+
+model UserCoupon {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  couponId  Int
+  coupon    Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  usedAt    DateTime?
+  orderId   Int?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, couponId])
+}
+
+// 적립금 내역 (+ 적립, − 사용·회수). 잔액은 합계입니다.
+model PointLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String
+  orderId   Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// 비밀번호 재설정 (이메일로 보낸 링크의 토큰을 해시해서 저장)
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
