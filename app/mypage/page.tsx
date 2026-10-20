@@ -22,6 +22,10 @@ export default async function Page() {
     prisma.order.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 5, include: { items: true } }),
     prisma.order.groupBy({ by: ["status"], where: { userId: user.id }, _count: { _all: true } }),
   ]);
+  const [pointSum, couponCount] = await Promise.all([
+    prisma.pointLog.aggregate({ where: { userId: user.id }, _sum: { amount: true } }).catch(() => null),
+    prisma.userCoupon.count({ where: { userId: user.id, usedAt: null, coupon: { active: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } } }).catch(() => 0),
+  ]);
   const count = (...statuses: string[]) => grouped.filter((g) => statuses.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
   const stats = [
     ["주문 접수", count("PENDING")],
@@ -48,8 +52,8 @@ export default async function Page() {
               <div style={{ marginTop: 6, fontSize: 13, color: "#767676" }}>회원 등급 [등급]</div>
             </div>
             <div style={{ display: "flex", gap: 40 }}>
-              <div><div style={{ fontSize: 12, color: "#767676" }}>적립금</div><div style={{ marginTop: 4, font: "800 20px Archivo,sans-serif" }}>[0]</div></div>
-              <div><div style={{ fontSize: 12, color: "#767676" }}>쿠폰</div><div style={{ marginTop: 4, font: "800 20px Archivo,sans-serif" }}>[0]</div></div>
+              <div><div style={{ fontSize: 12, color: "#767676" }}>적립금</div><div style={{ marginTop: 4, font: "800 20px Archivo,sans-serif" }}>{(pointSum?._sum.amount ?? 0).toLocaleString("ko-KR")}원</div></div>
+              <div><div style={{ fontSize: 12, color: "#767676" }}>쿠폰</div><div style={{ marginTop: 4, font: "800 20px Archivo,sans-serif" }}>{couponCount}장</div></div>
             </div>
           </div>
 

@@ -1,13 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { login } from "@/app/actions/auth";
 
 export default function LoginForm({ next = "" }: { next?: string }) {
   const [state, action, pending] = useActionState(login, undefined);
+  // 오류가 나도 입력한 내용이 지워지지 않도록 직접 제출합니다.
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    startTransition(() => action(data));
+  }
 
   return (
-    <form action={action}>
+    <form onSubmit={onSubmit}>
       <input type="hidden" name="next" value={next} />
       <label className="fld">
         아이디

@@ -1,8 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import CheckoutForm from "@/components/CheckoutForm";
+import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { resolveLines } from "@/lib/checkout";
-import { DISCOUNT, SHIPPING_FEE, itemOption, won } from "@/lib/orders";
+import { SHIPPING_FEE, itemOption, won } from "@/lib/orders";
 
 export const metadata = { title: "주문/결제" };
 
@@ -19,15 +20,24 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
   }
   const itemsTotal = lines.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
+  // 적립금 잔액과 쓸 수 있는 쿠폰 (관련 테이블이 아직 없어도 결제 화면은 보이게 합니다)
+  const [balance, owned] = await Promise.all([
+    prisma.pointLog.aggregate({ where: { userId: user.id }, _sum: { amount: true } }).then((r) => r._sum.amount ?? 0).catch(() => 0),
+    prisma.userCoupon.findMany({
+      where: { userId: user.id, usedAt: null, coupon: { active: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } },
+      include: { coupon: true },
+    }).catch(() => []),
+  ]);
+
   return (
     <section style={{ padding: "56px 60px 0" }}>
       <h1 style={{ margin: 0, font: "800 30px Archivo,sans-serif", letterSpacing: ".06em" }}>ORDER</h1>
       <CheckoutForm
         items={lines.map((i) => ({ name: i.name, option: itemOption(i), quantity: i.quantity, priceText: won(i.price * i.quantity), bg: i.bg }))}
-        itemsTotalText={won(itemsTotal)}
-        shippingText={won(SHIPPING_FEE)}
-        discountText={won(DISCOUNT)}
-        totalText={won(itemsTotal + SHIPPING_FEE - DISCOUNT)}
+        itemsTotal={itemsTotal}
+        shipping={SHIPPING_FEE}
+        balance={Math.max(0, balance)}
+        coupons={owned.map((u) => ({ id: u.id, name: u.coupon.name, kind: u.coupon.kind, value: u.coupon.value, minOrder: u.coupon.minOrder }))}
         defaults={{ name: user.name, phone: user.phone, email: user.email }}
         hidden={{ productId: sp.product ?? "", size: sp.size ?? "", qty: sp.qty ?? "", cart: sp.cart === "1" ? "1" : "" }}
       />

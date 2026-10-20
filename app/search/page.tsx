@@ -1,93 +1,48 @@
 import ProductCard from "@/components/ProductCard";
+import { prisma } from "@/lib/db";
+import { groupStock, soldOutOf } from "@/lib/stock";
+import { won } from "@/lib/orders";
+import { darkBtn, narrowTitle } from "@/lib/ui";
 
 export const metadata = { title: "검색" };
 
-export default function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const q = ((await searchParams).q ?? "").trim().slice(0, 50);
+  const products = q
+    ? await prisma.product.findMany({
+        where: { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }] },
+        orderBy: [{ category: "asc" }, { position: "asc" }],
+        take: 40,
+      })
+    : [];
+  const stocks = groupStock(products.length ? await prisma.productStock.findMany({ where: { productId: { in: products.map((p) => p.id) } } }).catch(() => []) : []);
+
   return (
     <>
-      <section style={{ maxWidth: "760px", margin: "0 auto", padding: "64px 24px 0", textAlign: "center" }}>
-        <h1 style={{ margin: "0", font: "800 30px Archivo,sans-serif", letterSpacing: ".06em" }}>
-          SEARCH
-        </h1>
-        <div style={{ display: "flex", marginTop: "28px", borderBottom: "2px solid #111" }}>
-          <input type="text" aria-label="검색어" placeholder="검색어를 입력하세요" style={{ flex: "1", border: "0", padding: "16px 4px", font: "400 18px 'Noto Sans KR',sans-serif", outline: "none" }} />
-          <a href="#" style={{ padding: "16px 8px", font: "700 13px Archivo,sans-serif", letterSpacing: ".08em" }}>
-            SEARCH
-          </a>
-        </div>
-        <div style={{ marginTop: "28px", font: "700 12px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>
-          POPULAR
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px", marginTop: "14px" }}>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #ccc", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            [인기 검색어]
-          </a>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #ccc", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            [인기 검색어]
-          </a>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #ccc", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            [인기 검색어]
-          </a>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #ccc", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            [인기 검색어]
-          </a>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #ccc", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            [인기 검색어]
-          </a>
-        </div>
+      <section style={{ maxWidth: 760, margin: "0 auto", padding: "64px 24px 0", textAlign: "center" }}>
+        <h1 style={narrowTitle}>SEARCH</h1>
+        <form action="/search" style={{ display: "flex", marginTop: 28, borderBottom: "2px solid #111" }}>
+          <input name="q" type="search" defaultValue={q} placeholder="검색어를 입력하세요" aria-label="검색어" autoFocus style={{ flex: 1, border: 0, padding: "16px 4px", font: "400 18px 'Noto Sans KR',sans-serif", outline: "none", background: "none" }} />
+          <button type="submit" style={{ ...darkBtn, background: "none", color: "#111", padding: "16px 8px", fontSize: 13 }}>SEARCH</button>
+        </form>
       </section>
-      <section style={{ padding: "64px 60px 0" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", padding: "16px 0", borderTop: "1px solid #111", borderBottom: "1px solid #e5e5e5", fontSize: "13px" }}>
-          <span>
-            [검색어] 검색 결과
-            {" "}
-            <b>
-              [00]
-            </b>
-            건
-          </span>
-          <span style={{ display: "flex", gap: "18px" }}>
-            <a href="#" style={{ fontWeight: "700" }}>
-              신상품순
-            </a>
-            <a href="#" style={{ color: "#767676" }}>
-              인기순
-            </a>
-            <a href="#" style={{ color: "#767676" }}>
-              낮은가격순
-            </a>
-            <a href="#" style={{ color: "#767676" }}>
-              높은가격순
-            </a>
-          </span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "40px 20px", marginTop: "32px" }}>
-          <ProductCard name="부클 벨티드 코트" price="₩276,000" bg="#e6e3de" />
-          <ProductCard name="데님 셔츠" price="₩145,000" bg="#ddd8d0" />
-          <ProductCard name="레더 재킷" price="₩194,000" bg="#d6d6d6" />
-          <ProductCard name="헨리넥 니트" price="₩80,000" bg="#dcdcdc" />
-          <ProductCard name="밀리터리 셋업" price="₩119,000" bg="#ddd8d0" />
-          <ProductCard name="와이드 팬츠" price="₩101,000" bg="#d6d6d6" />
-          <ProductCard name="레이어드 니트" price="₩89,000" bg="#e6e3de" />
-          <ProductCard name="후드 집업" price="₩193,000" bg="#ddd8d0" />
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "56px" }}>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", borderBottom: "2px solid #111" }}>
-            1
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            2
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            3
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            4
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            →
-          </a>
-        </div>
+      <section style={{ padding: "56px 60px 0" }}>
+        {q ? (
+          <>
+            <div style={{ padding: "16px 0", borderTop: "1px solid #111", borderBottom: "1px solid #e5e5e5", fontSize: 13 }}>‘{q}’ 검색 결과 <b>{products.length}</b>건</div>
+            {products.length === 0 ? (
+              <div style={{ padding: "56px 0", textAlign: "center", fontSize: 14, color: "#767676" }}>검색 결과가 없어요. 다른 검색어로 찾아보세요.</div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "40px 20px", marginTop: 32 }}>
+                {products.map((p) => (
+                  <ProductCard key={p.id} id={p.id} name={p.name} price={won(p.price)} bg={p.bg} sale={p.sale ?? undefined} imageUrl={p.imageUrl ?? undefined} soldOut={soldOutOf(stocks.get(p.id) ?? {})} />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ padding: "24px 0", textAlign: "center", fontSize: 14, color: "#767676" }}>상품 이름이나 설명으로 검색할 수 있어요.</div>
+        )}
       </section>
     </>
   );

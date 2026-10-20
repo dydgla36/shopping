@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin";
 import { SIZES } from "@/lib/checkout";
 import { STATUS_LABEL } from "@/lib/orders";
 import { lists } from "@/lib/lists";
+import { cancelOrderTx, earnPointsTx } from "@/lib/orderOps";
 
 // 서버 액션은 누구나 직접 호출할 수 있는 주소이므로, 모든 동작의 맨 처음에 관리자인지 확인합니다.
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -24,17 +25,14 @@ export async function updateOrder(formData: FormData) {
   if (order!.status === "CANCELED" && status !== "CANCELED") fail("취소된 주문은 상태를 되돌릴 수 없어요.");
 
   await prisma.$transaction(async (tx) => {
-    // 주문을 취소하면 재고를 되돌려 놓습니다. (재고를 관리하는 사이즈만)
-    if (status === "CANCELED" && order!.status !== "CANCELED") {
-      for (const it of order!.items) {
-        if (!it.productId || !it.size) continue;
-        await tx.productStock.updateMany({ where: { productId: it.productId, size: it.size }, data: { quantity: { increment: it.quantity } } });
-      }
-    }
+    // 취소: 재고, 적립금, 쿠폰을 되돌립니다.
+    if (status === "CANCELED" && order!.status !== "CANCELED") await cancelOrderTx(tx, order!.id);
     await tx.order.update({
       where: { orderNumber: no },
       data: { status, carrier: str(formData, "carrier") || null, trackingNumber: str(formData, "trackingNumber") || null },
     });
+    // 배송 완료: 적립금 지급
+    if (status === "DELIVERED" && order!.status !== "DELIVERED") await earnPointsTx(tx, order!);
   });
   redirect(`${to}?saved=1`);
 }

@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 import { randomInt } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { DISCOUNT, SHIPPING_FEE } from "@/lib/orders";
+import { SHIPPING_FEE } from "@/lib/orders";
 import { resolveLines } from "@/lib/checkout";
+import { couponDiscount, couponUsable } from "@/lib/coupons";
 import type { FormState } from "@/app/actions/auth";
 
-class StockError extends Error {}
+class CheckoutError extends Error {}
 
 const PAYMENTS = ["신용카드", "계좌이체", "무통장입금", "카카오페이"];
 
@@ -36,21 +37,44 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   const lines = await resolveLines({ product: s("productId") || undefined, size: s("size") || undefined, qty: s("qty") || undefined, cart: fromCart, userId: user.id });
   if (!lines) return { error: fromCart ? "장바구니가 비어 있어요." : "주문할 상품을 찾을 수 없어요." };
   const itemsTotal = lines.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const total = itemsTotal + SHIPPING_FEE - DISCOUNT;
+  const userCouponId = Number(s("userCouponId")) || 0;
+  const wantPoints = Math.max(0, Math.floor(Number(s("points"))) || 0);
+
   const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const orderNumber = `G${ymd}-${randomInt(10000, 100000)}`;
 
   try {
     await prisma.$transaction(async (tx) => {
-      // 재고 확인과 차감을 한 번에 처리합니다. (재고를 관리하는 사이즈만)
+      // 1) 재고 확인과 차감 (재고를 관리하는 사이즈만)
       for (const l of lines) {
         if (!l.productId || !l.size) continue;
         const stock = await tx.productStock.findUnique({ where: { productId_size: { productId: l.productId, size: l.size } } });
         if (!stock) continue; // 재고를 따로 관리하지 않는 상품(무제한)
         const done = await tx.productStock.updateMany({ where: { id: stock.id, quantity: { gte: l.quantity } }, data: { quantity: { decrement: l.quantity } } });
-        if (done.count === 0) throw new StockError(`'${l.name}' (${l.size}) 재고가 부족해요. 남은 수량: ${stock.quantity}개`);
+        if (done.count === 0) throw new CheckoutError(`'${l.name}' (${l.size}) 재고가 부족해요. 남은 수량: ${stock.quantity}개`);
       }
-      await tx.order.create({
+
+      // 2) 쿠폰: 내 것이고 아직 안 썼고 조건에 맞아야 합니다.
+      let couponOff = 0;
+      if (userCouponId) {
+        const uc = await tx.userCoupon.findFirst({ where: { id: userCouponId, userId: user.id, usedAt: null }, include: { coupon: true } });
+        if (!uc || !couponUsable(uc.coupon, itemsTotal)) throw new CheckoutError("사용할 수 없는 쿠폰이에요. 쿠폰을 다시 선택해 주세요.");
+        const marked = await tx.userCoupon.updateMany({ where: { id: uc.id, usedAt: null }, data: { usedAt: new Date() } });
+        if (marked.count === 0) throw new CheckoutError("이미 사용한 쿠폰이에요.");
+        couponOff = couponDiscount(uc.coupon, itemsTotal);
+      }
+
+      // 3) 적립금: 잔액과 (쿠폰을 뺀) 결제 금액을 넘길 수 없습니다.
+      let pointsUsed = 0;
+      if (wantPoints > 0) {
+        const bal = (await tx.pointLog.aggregate({ where: { userId: user.id }, _sum: { amount: true } }))._sum.amount ?? 0;
+        const max = Math.max(0, Math.min(bal, itemsTotal - couponOff));
+        if (wantPoints > max) throw new CheckoutError(`사용할 수 있는 적립금은 최대 ${max.toLocaleString("ko-KR")}원이에요.`);
+        pointsUsed = wantPoints;
+      }
+
+      const discount = couponOff + pointsUsed;
+      const order = await tx.order.create({
         data: {
           orderNumber,
           userId: user.id,
@@ -58,8 +82,10 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
           paymentMethod,
           itemsTotal,
           shippingFee: SHIPPING_FEE,
-          discount: DISCOUNT,
-          total,
+          discount,
+          pointsUsed,
+          userCouponId: userCouponId || null,
+          total: itemsTotal + SHIPPING_FEE - discount,
           ordererName,
           ordererPhone,
           ordererEmail,
@@ -73,11 +99,13 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
           },
         },
       });
+      if (pointsUsed > 0) await tx.pointLog.create({ data: { userId: user.id, amount: -pointsUsed, reason: `주문 적립금 사용 (${orderNumber})`, orderId: order.id } });
+      if (userCouponId) await tx.userCoupon.update({ where: { id: userCouponId }, data: { orderId: order.id } });
       // 장바구니에서 주문했다면, 주문이 저장되는 것과 함께 장바구니를 비웁니다.
       if (fromCart) await tx.cartItem.deleteMany({ where: { userId: user.id } });
     });
   } catch (e) {
-    if (e instanceof StockError) return { error: e.message };
+    if (e instanceof CheckoutError) return { error: e.message };
     console.error("주문 저장 실패:", e);
     return { error: "주문 저장 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." };
   }

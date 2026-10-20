@@ -8,6 +8,12 @@ const items = [
   ["주문 / 배송 관리", "/admin/orders"],
   ["회원 관리", "/admin/members"],
   ["상품 관리", "/admin/products"],
+  ["후기 관리", "/admin/reviews"],
+  ["문의 관리", "/admin/qna"],
+  ["공지 관리", "/admin/notices"],
+  ["취소·반품·교환", "/admin/claims"],
+  ["쿠폰 관리", "/admin/coupons"],
+  ["DB 설정", "/admin/setup"],
   ["관리자 계정", "/admin/account"],
 ];
 

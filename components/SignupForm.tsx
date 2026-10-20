@@ -1,18 +1,24 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { signup } from "@/app/actions/auth";
 
 const row = { display: "flex", alignItems: "center", gap: 10, marginTop: 12, fontSize: 13, color: "#333" } as const;
 
 export default function SignupForm() {
   const [state, action, pending] = useActionState(signup, undefined);
+  // 오류가 나도 입력한 내용이 지워지지 않도록 직접 제출합니다.
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    startTransition(() => action(data));
+  }
   const [agree, setAgree] = useState({ terms: false, privacy: false, marketing: false });
   const all = agree.terms && agree.privacy && agree.marketing;
   const toggle = (key: keyof typeof agree) => setAgree((a) => ({ ...a, [key]: !a[key] }));
 
   return (
-    <form action={action}>
+    <form onSubmit={onSubmit}>
       <label className="fld">
         아이디
         <input name="loginId" type="text" placeholder="영문, 숫자 4~16자" autoComplete="username" required />

@@ -27,4 +27,9 @@ export const CHECKOUT_ITEMS = [
   { name: "데님 셔츠", price: 145000, quantity: 1, color: "인디고", size: "S", bg: "#ddd8d0" },
 ];
 export const SHIPPING_FEE = 0;
+export const POINT_RATE = 0.01; // 배송 완료 시 결제 금액의 1%를 적립금으로 줍니다.
 export const DISCOUNT = 0;
+
+export const CLAIM_TYPE: Record<string, string> = { CANCEL: "취소", RETURN: "반품", EXCHANGE: "교환" };
+export const CLAIM_STATUS: Record<string, string> = { RECEIVED: "접수", PROCESSING: "처리 중", DONE: "완료", REJECTED: "거절" };
+export const EARN_REASON = "구매 적립";

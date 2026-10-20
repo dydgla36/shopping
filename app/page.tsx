@@ -1,5 +1,5 @@
+import HomeRow from "@/components/HomeRow";
 import Link from "next/link";
-import ProductCard from "@/components/ProductCard";
 
 export const metadata = { title: "패션 쇼핑몰 홈페이지" };
 
@@ -31,54 +31,9 @@ export default function Page() {
           </div>
         </div>
       </section>
-      <section className="sec">
-        <div className="sh">
-          <h2>
-            WOMEN'S NEW
-          </h2>
-          <Link href="/list/new">
-            신규 상품 보기
-          </Link>
-        </div>
-        <div className="grid">
-          <ProductCard name="데님 셔츠" price="₩145,000" bg="#e6e3de" />
-          <ProductCard name="퍼 트림 후드 집업" price="₩193,000" bg="#ddd8d0" />
-          <ProductCard name="밀리터리 셋업" price="₩119,000" bg="#e6e3de" />
-          <ProductCard name="부클 벨티드 코트" price="₩276,000" bg="#ddd8d0" />
-        </div>
-      </section>
-      <section className="sec">
-        <div className="sh">
-          <h2>
-            MEN'S NEW
-          </h2>
-          <Link href="/list/new">
-            신규 상품 보기
-          </Link>
-        </div>
-        <div className="grid">
-          <ProductCard name="레더 재킷" price="₩194,000" bg="#d6d6d6" sale="7%" />
-          <ProductCard name="헨리넥 니트" price="₩80,000" bg="#dcdcdc" sale="7%" />
-          <ProductCard name="와이드 팬츠" price="₩101,000" bg="#d6d6d6" sale="7%" />
-          <ProductCard name="후디드 봄버" price="₩205,000" bg="#dcdcdc" />
-        </div>
-      </section>
-      <section className="sec">
-        <div className="sh">
-          <h2>
-            WOMEN BEST
-          </h2>
-          <Link href="/list/best">
-            인기 상품 보기
-          </Link>
-        </div>
-        <div className="grid">
-          <ProductCard name="스트라이프 슬리브리스 & 가디건 세트" price="₩118,000" bg="#e6e3de" />
-          <ProductCard name="트림 가디건 세트" price="₩130,000" bg="#ddd8d0" />
-          <ProductCard name="레이어드 니트" price="₩89,000" bg="#e6e3de" />
-          <ProductCard name="오프숄더 스카프 스웨터" price="₩142,000" bg="#ddd8d0" />
-        </div>
-      </section>
+      <HomeRow title="WOMEN'S NEW" href="/list/women" slug="women" />
+      <HomeRow title="MEN'S NEW" href="/list/men" slug="men" />
+      <HomeRow title="WOMEN BEST" href="/list/best" slug="best" />
     </>
   );
 }

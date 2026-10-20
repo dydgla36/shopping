@@ -1,15 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { createOrder } from "@/app/actions/order";
+import { couponDiscount, couponText, couponUsable } from "@/lib/coupons";
+import { won } from "@/lib/orders";
 
 type Item = { name: string; option: string; quantity: number; priceText: string; bg: string };
+type Coupon = { id: number; name: string; kind: string; value: number; minOrder: number };
 type Props = {
   items: Item[];
-  itemsTotalText: string;
-  shippingText: string;
-  discountText: string;
-  totalText: string;
+  itemsTotal: number;
+  shipping: number;
+  balance: number;
+  coupons: Coupon[];
   defaults: { name: string; phone: string; email: string };
   hidden: { productId: string; size: string; qty: string; cart: string };
 };
@@ -18,11 +21,25 @@ const heading = { font: "800 16px Archivo,'Noto Sans KR',sans-serif", letterSpac
 const sec = { marginTop: 44, paddingBottom: 14, borderBottom: "1px solid #111", ...heading } as const;
 const row = { display: "flex", justifyContent: "space-between", marginTop: 14, fontSize: 14 } as const;
 
-export default function CheckoutForm({ items, itemsTotalText, shippingText, discountText, totalText, defaults, hidden }: Props) {
+export default function CheckoutForm({ items, itemsTotal, shipping, balance, coupons, defaults, hidden }: Props) {
   const [state, action, pending] = useActionState(createOrder, undefined);
+  // 오류가 나도 입력한 내용이 지워지지 않도록 직접 제출합니다.
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    startTransition(() => action(data));
+  }
+  // 화면의 금액은 미리 계산해서 보여주는 것이고, 실제 금액은 서버가 다시 계산합니다.
+  const [couponId, setCouponId] = useState("");
+  const [pointsText, setPointsText] = useState("");
+  const coupon = coupons.find((c) => String(c.id) === couponId);
+  const couponOff = coupon && couponUsable(coupon, itemsTotal) ? couponDiscount(coupon, itemsTotal) : 0;
+  const maxPoints = Math.max(0, Math.min(balance, itemsTotal - couponOff));
+  const points = Math.min(maxPoints, Math.max(0, Math.floor(Number(pointsText)) || 0));
+  const totalText = won(itemsTotal + shipping - couponOff - points);
 
   return (
-    <form action={action} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 56, marginTop: 8, alignItems: "start" }}>
+    <form onSubmit={onSubmit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 56, marginTop: 8, alignItems: "start" }}>
       <div>
         <input type="hidden" name="productId" value={hidden.productId} />
         <input type="hidden" name="size" value={hidden.size} />
@@ -39,6 +56,21 @@ export default function CheckoutForm({ items, itemsTotalText, shippingText, disc
         <label className="fld">주소<input name="address" type="text" placeholder="주소를 입력하세요" required /></label>
         <label className="fld" style={{ marginTop: 10 }}><input name="addressDetail" type="text" aria-label="상세주소" placeholder="상세주소를 입력하세요" /></label>
         <label className="fld">배송 메모<input name="deliveryMemo" type="text" placeholder="배송 시 요청사항" /></label>
+
+        <div style={sec}>쿠폰 · 적립금</div>
+        <label className="fld">쿠폰
+          <select name="userCouponId" value={couponId} onChange={(e) => setCouponId(e.target.value)}>
+            <option value="">사용 안 함</option>
+            {coupons.map((c) => (
+              <option key={c.id} value={c.id} disabled={!couponUsable(c, itemsTotal)}>
+                {c.name} ({couponText(c)}){c.minOrder > 0 ? ` · ${won(c.minOrder)} 이상` : ""}{!couponUsable(c, itemsTotal) ? " · 사용 불가" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="fld">적립금 (보유 {won(balance)}, 최대 {won(maxPoints)}까지 사용)
+          <input name="points" type="number" min={0} max={maxPoints} value={pointsText} onChange={(e) => setPointsText(e.target.value)} placeholder="0" />
+        </label>
 
         <div style={sec}>결제 수단</div>
         <div style={{ marginTop: 20 }}>
@@ -66,9 +98,10 @@ export default function CheckoutForm({ items, itemsTotalText, shippingText, disc
             <div style={{ font: "800 14px Archivo,sans-serif" }}>{it.priceText}</div>
           </div>
         ))}
-        <div style={row}><span>상품금액</span><span>{itemsTotalText}</span></div>
-        <div style={row}><span>배송비</span><span>{shippingText}</span></div>
-        <div style={row}><span>할인 금액</span><span>{discountText}</span></div>
+        <div style={row}><span>상품금액</span><span>{won(itemsTotal)}</span></div>
+        <div style={row}><span>배송비</span><span>{won(shipping)}</span></div>
+        <div style={row}><span>쿠폰 할인</span><span>− {won(couponOff)}</span></div>
+        <div style={row}><span>적립금 사용</span><span>− {won(points)}</span></div>
         <div style={{ marginTop: 22, paddingTop: 20, borderTop: "1px solid #111" }}>
           <div style={{ ...row, marginTop: 0, fontWeight: 700 }}><span>총 결제금액</span><span>{totalText}</span></div>
         </div>

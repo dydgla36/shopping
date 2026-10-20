@@ -8,6 +8,9 @@ import { LOW_STOCK, soldOutOf, stockMap, type StockMap } from "@/lib/stock";
 import { won } from "@/lib/orders";
 import { addToCart, buyNow } from "@/app/actions/cart";
 import { toggleWishlist } from "@/app/actions/wishlist";
+import { maskName } from "@/lib/mask";
+import { fmtDate } from "@/lib/orders";
+import { stars } from "@/lib/ui";
 
 // 관리자가 DB에 등록한 상품의 상세 페이지입니다. (/product/상품번호)
 export const dynamic = "force-dynamic";
@@ -41,6 +44,11 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     stockMap(product.id).catch((): StockMap => ({})),
     user ? prisma.wishlistItem.findUnique({ where: { userId_productId: { userId: user.id, productId: product.id } } }).catch(() => null) : null,
     prisma.product.findMany({ where: { category: product.category, NOT: { id: product.id } }, orderBy: { position: "asc" }, take: 4 }),
+  ]);
+  // 후기 (후기 테이블이 아직 없어도 상세 화면은 보이게 합니다)
+  const [reviews, reviewAgg] = await Promise.all([
+    prisma.review.findMany({ where: { productId: product.id }, orderBy: { createdAt: "desc" }, take: 5, include: { user: { select: { name: true } } } }).catch(() => []),
+    prisma.review.aggregate({ where: { productId: product.id }, _avg: { rating: true }, _count: { _all: true } }).catch(() => null),
   ]);
   const soldOut = soldOutOf(stock);
   const firstAvailable = ["M", ...SIZES].find((s) => stock[s] !== 0) ?? "M"; // 품절이 아닌 사이즈를 기본 선택
@@ -109,6 +117,21 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             <b style={{ color: "#111" }}>교환·반품</b> [교환·반품 정책 안내]
           </div>
         </form>
+      </section>
+
+      <section style={{ padding: "72px 60px 0", maxWidth: 960 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 12, paddingBottom: 14, borderBottom: "1px solid #111" }}>
+          <div style={{ font: "800 22px Archivo,sans-serif" }}>REVIEW{reviewAgg && reviewAgg._count._all > 0 && <span style={{ marginLeft: 12, fontSize: 15, fontWeight: 700 }}>★ {reviewAgg._avg.rating?.toFixed(1)} <span style={{ color: "#767676", fontWeight: 400 }}>({reviewAgg._count._all})</span></span>}</div>
+          <Link href={`/review?product=${product.id}`} style={{ fontSize: 13, borderBottom: "1px solid #111" }}>후기 전체 보기</Link>
+        </div>
+        {reviews.length === 0 && <div style={{ padding: "28px 0", fontSize: 14, color: "#767676" }}>아직 후기가 없어요.</div>}
+        {reviews.map((r) => (
+          <div key={r.id} style={{ padding: "20px 0", borderBottom: "1px solid #e5e5e5" }}>
+            <div aria-label={`별점 ${r.rating}점`} style={{ font: "700 14px Archivo,sans-serif", letterSpacing: ".1em" }}>{stars(r.rating)}</div>
+            <p style={{ margin: "10px 0 0", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-line" }}>{r.content}</p>
+            <div style={{ marginTop: 10, fontSize: 12, color: "#767676" }}>{maskName(r.user.name)} · {fmtDate(r.createdAt)}</div>
+          </div>
+        ))}
       </section>
 
       {related.length > 0 && (

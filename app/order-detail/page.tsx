@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { STATUS_LABEL, fmtDate, itemOption, won } from "@/lib/orders";
+import ActionForm from "@/components/ActionForm";
+import { createClaim } from "@/app/actions/claims";
+import { CLAIM_STATUS, CLAIM_TYPE, STATUS_LABEL, fmtDate, itemOption, won } from "@/lib/orders";
 
 export const metadata = { title: "주문 상세" };
 
@@ -20,6 +22,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   // 로그인한 본인의 주문만 조회합니다.
   const order = await prisma.order.findFirst({ where: { orderNumber: no, userId: user.id }, include: { items: true } });
   if (!order) notFound();
+  const claims = await prisma.claim.findMany({ where: { orderId: order.id }, orderBy: { createdAt: "desc" } }).catch(() => []);
+  const openClaim = claims.some((c) => c.status === "RECEIVED" || c.status === "PROCESSING");
+  const claimTypes = ["PENDING", "PAID", "PREPARING"].includes(order.status) ? ["CANCEL"] : ["SHIPPING", "DELIVERED"].includes(order.status) ? ["RETURN", "EXCHANGE"] : [];
 
   return (
     <>
@@ -43,7 +48,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                   <div style={{ fontSize: 15 }}>{it.name}</div>
                   <div style={{ marginTop: 6, fontSize: 12, color: "#767676" }}>{[itemOption(it), `수량 ${it.quantity}`].filter(Boolean).join(" / ")}</div>
                 </div>
-                <div style={{ font: "800 15px Archivo,sans-serif" }}>{won(it.price * it.quantity)}</div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ font: "800 15px Archivo,sans-serif" }}>{won(it.price * it.quantity)}</div>
+                  {order.status === "DELIVERED" && it.productId && <Link href={`/review/write?product=${it.productId}`} style={{ display: "inline-block", marginTop: 8, fontSize: 12, borderBottom: "1px solid #111" }}>후기 쓰기</Link>}
+                </div>
               </div>
             ))}
             <div style={{ marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", ...head }}>배송 정보</div>
@@ -60,6 +68,29 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             <Row a="할인 금액" b={won(order.discount)} />
             <div style={{ ...line, borderBottom: 0, fontWeight: 700 }}><span>총 결제금액</span><span style={{ font: "800 20px Archivo,sans-serif" }}>{won(order.total)}</span></div>
           </div>
+        </div>
+        <div style={{ maxWidth: 520, marginTop: 8 }}>
+          <div style={{ marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", ...head }}>취소 / 반품 / 교환</div>
+          {claims.map((c) => (
+            <div key={c.id} style={{ padding: "14px 0", borderBottom: "1px solid #e5e5e5", fontSize: 14 }}>
+              <b>{CLAIM_TYPE[c.type] ?? c.type}</b> · {CLAIM_STATUS[c.status] ?? c.status} · <span style={{ color: "#767676" }}>{fmtDate(c.createdAt)}</span>
+              <div style={{ marginTop: 6, fontSize: 13, color: "#555", whiteSpace: "pre-line" }}>{c.reason}</div>
+              {c.adminNote && <div style={{ marginTop: 6, fontSize: 13, color: "#2d6a2d" }}>처리 안내: {c.adminNote}</div>}
+            </div>
+          ))}
+          {claimTypes.length > 0 && !openClaim ? (
+            <ActionForm action={createClaim} submitLabel="신청하기">
+              <input type="hidden" name="orderNumber" value={order.orderNumber} />
+              <label className="fld">신청 유형
+                <select name="type">{claimTypes.map((t) => <option key={t} value={t}>{CLAIM_TYPE[t]}</option>)}</select>
+              </label>
+              <label className="fld">사유<textarea name="reason" rows={4} maxLength={500} placeholder="사유를 5자 이상 입력해 주세요" required /></label>
+            </ActionForm>
+          ) : (
+            <p style={{ margin: "16px 0 0", fontSize: 13, color: "#767676" }}>
+              {openClaim ? "처리 중인 신청이 있어요. 처리가 끝나면 다시 신청할 수 있어요." : order.status === "CANCELED" ? "취소된 주문이에요." : "지금은 신청할 수 없는 주문이에요."}
+            </p>
+          )}
         </div>
         <div style={{ marginTop: 40 }}>
           <Link href="/mypage" style={{ display: "inline-block", padding: "14px 24px", border: "1px solid #111", font: "700 12px Archivo,sans-serif", letterSpacing: ".08em" }}>BACK TO MY PAGE</Link>

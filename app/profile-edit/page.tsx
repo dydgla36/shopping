@@ -1,78 +1,40 @@
-import { requireUser } from "@/lib/auth";
 import Link from "next/link";
+import ActionForm from "@/components/ActionForm";
+import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
+import { changePassword, updateProfile } from "@/app/actions/account";
+import { crumb } from "@/lib/ui";
 
 export const metadata = { title: "회원 정보 수정" };
 
+const title = { marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", font: "800 16px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".06em" } as const;
+
 export default async function Page() {
-  await requireUser("/profile-edit");
+  const me = await requireUser("/profile-edit");
+  const user = await prisma.user.findUnique({ where: { id: me.id } });
+  if (!user) return null;
+
   return (
     <>
-      <div style={{ padding: "24px 60px 0", fontSize: "12px", color: "#767676" }}>
-        <Link href="/" style={{ color: "#767676" }}>
-          HOME
-        </Link>
-        {" "}
-        &gt;
-        {" "}
-        <Link href="/mypage" style={{ color: "#767676" }}>
-          MY PAGE
-        </Link>
-        {" "}
-        &gt; 회원 정보 수정
-      </div>
-      <section style={{ maxWidth: "640px", margin: "0 auto", padding: "32px 24px 0" }}>
-        <h1 style={{ margin: "0", textAlign: "center", font: "800 30px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".06em" }}>
-          EDIT PROFILE
-        </h1>
-        <label className="fld" style={{ marginTop: "32px" }}>
-          아이디
-          <input type="text" value="[아이디]" disabled style={{ background: "#f4f2ee", color: "#767676" }} />
-        </label>
-        <label className="fld">
-          이름
-          <input type="text" placeholder="이름을 입력하세요" />
-        </label>
-        <label className="fld">
-          이메일
-          <input type="email" placeholder="example@email.com" />
-        </label>
-        <label className="fld">
-          휴대전화
-          <input type="tel" placeholder="010-0000-0000" />
-        </label>
-        <div style={{ marginTop: "44px", paddingBottom: "12px", borderBottom: "1px solid #111", font: "800 15px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".06em" }}>
-          비밀번호 변경
-        </div>
-        <label className="fld">
-          현재 비밀번호
-          <input type="password" placeholder="현재 비밀번호" />
-        </label>
-        <label className="fld">
-          새 비밀번호
-          <input type="password" placeholder="영문, 숫자 포함 8자 이상" />
-        </label>
-        <label className="fld">
-          새 비밀번호 확인
-          <input type="password" placeholder="새 비밀번호를 다시 입력하세요" />
-        </label>
-        <label style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "28px", fontSize: "13px", color: "#333" }}>
-          <input type="checkbox" />
-          {" "}
-          마케팅 정보 수신 동의
-        </label>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "36px" }}>
-          <Link className="btn" href="/mypage" style={{ border: "1px solid #111" }}>
-            CANCEL
-          </Link>
-          <Link className="btn" href="/mypage" style={{ background: "#111", color: "#fff" }}>
-            SAVE
-          </Link>
-        </div>
-        <div style={{ marginTop: "28px", textAlign: "center" }}>
-          <a href="#" style={{ fontSize: "12px", color: "#767676", borderBottom: "1px solid #767676" }}>
-            회원 탈퇴
-          </a>
-        </div>
+      <div style={crumb}><Link href="/" style={{ color: "#767676" }}>HOME</Link> &gt; <Link href="/mypage" style={{ color: "#767676" }}>MY PAGE</Link> &gt; 회원 정보 수정</div>
+      <section style={{ maxWidth: 520, margin: "0 auto", padding: "20px 24px 0" }}>
+        <h1 style={{ margin: 0, font: "800 30px Archivo,sans-serif", letterSpacing: ".06em" }}>EDIT PROFILE</h1>
+
+        <div style={title}>회원 정보</div>
+        <ActionForm action={updateProfile} submitLabel="SAVE">
+          <label className="fld">아이디<input type="text" value={user.loginId} readOnly disabled style={{ background: "#f4f2ee" }} /></label>
+          <label className="fld">이름<input name="name" type="text" defaultValue={user.name} required /></label>
+          <label className="fld">이메일<input name="email" type="email" defaultValue={user.email} required /></label>
+          <label className="fld">휴대전화<input name="phone" type="tel" defaultValue={user.phone} required /></label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13, color: "#555" }}><input name="marketing" type="checkbox" defaultChecked={user.marketingOptIn} /> 마케팅 정보 수신 동의</label>
+        </ActionForm>
+
+        <div style={title}>비밀번호 변경</div>
+        <ActionForm action={changePassword} submitLabel="CHANGE PASSWORD" resetOnSuccess>
+          <label className="fld">현재 비밀번호<input name="current" type="password" autoComplete="current-password" required /></label>
+          <label className="fld">새 비밀번호 (영문, 숫자 포함 8자 이상)<input name="next" type="password" autoComplete="new-password" required /></label>
+          <label className="fld">새 비밀번호 확인<input name="confirm" type="password" autoComplete="new-password" required /></label>
+        </ActionForm>
       </section>
     </>
   );

@@ -11,7 +11,7 @@ export default async function Page() {
   kst.setUTCHours(0, 0, 0, 0);
   const todayStart = new Date(kst.getTime() - 9 * 3600 * 1000);
 
-  const [today, total, sum, waiting, members, recent, lowStock] = await Promise.all([
+  const [today, total, sum, waiting, members, recent, lowStock, openQna, openClaims] = await Promise.all([
     prisma.order.count({ where: { createdAt: { gte: todayStart } } }),
     prisma.order.count(),
     prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: "CANCELED" } } }),
@@ -20,6 +20,8 @@ export default async function Page() {
     prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 5, include: { items: true } }),
     // 품절이거나 재고가 3개 이하인 사이즈 수 (재고 테이블이 아직 없으면 0)
     prisma.productStock.count({ where: { quantity: { lte: 3 } } }).catch(() => 0),
+    prisma.question.count({ where: { answer: null } }).catch(() => 0),
+    prisma.claim.count({ where: { status: { in: ["RECEIVED", "PROCESSING"] } } }).catch(() => 0),
   ]);
   const cols = "100px 150px 1fr 110px 90px";
 
@@ -31,6 +33,8 @@ export default async function Page() {
         <div style={card}><div style={cardLabel}>배송 처리 대기</div><div style={cardValue}>{waiting}</div></div>
         <div style={card}><div style={cardLabel}>전체 주문</div><div style={cardValue}>{total}</div></div>
         <div style={card}><div style={cardLabel}>회원 수</div><div style={cardValue}>{members}</div></div>
+        <Link href="/admin/qna?status=waiting" style={{ ...card, display: "block" }}><div style={cardLabel}>답변 대기 문의</div><div style={{ ...cardValue, color: openQna > 0 ? "#c0392b" : undefined }}>{openQna}</div></Link>
+        <Link href="/admin/claims" style={{ ...card, display: "block" }}><div style={cardLabel}>처리 대기 취소·반품·교환</div><div style={{ ...cardValue, color: openClaims > 0 ? "#c0392b" : undefined }}>{openClaims}</div></Link>
         <Link href="/admin/products" style={{ ...card, display: "block" }}><div style={cardLabel}>품절·재고 부족 (3개 이하)</div><div style={{ ...cardValue, color: lowStock > 0 ? "#c0392b" : undefined }}>{lowStock}</div></Link>
         <div style={{ ...card, flexBasis: 260 }}><div style={cardLabel}>주문 금액 합계 (취소 제외)</div><div style={cardValue}>{won(sum._sum.total ?? 0)}</div></div>
       </div>

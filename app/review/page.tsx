@@ -1,195 +1,46 @@
 import Link from "next/link";
+import Pager from "@/components/Pager";
+import { prisma } from "@/lib/db";
+import { maskName } from "@/lib/mask";
+import { fmtDate } from "@/lib/orders";
+import { box, crumb, darkBtn, h1, pageWrap, stars, subtitle } from "@/lib/ui";
 
-export const metadata = { title: "리뷰" };
+export const metadata = { title: "후기" };
+const PER = 10;
 
-export default function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ page?: string; product?: string }> }) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page) || 1);
+  const productId = Number.isInteger(Number(sp.product)) && sp.product ? Number(sp.product) : undefined;
+  const where = productId ? { productId } : {};
+  const [rows, total, agg, product] = await Promise.all([
+    prisma.review.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PER, take: PER, include: { user: { select: { name: true } }, product: { select: { id: true, name: true } } } }),
+    prisma.review.count({ where }),
+    prisma.review.aggregate({ where, _avg: { rating: true } }),
+    productId ? prisma.product.findUnique({ where: { id: productId }, select: { id: true, name: true } }) : null,
+  ]);
+
   return (
     <>
-      <div style={{ padding: "24px 60px 0", fontSize: "12px", color: "#767676" }}>
-        <Link href="/" style={{ color: "#767676" }}>
-          HOME
-        </Link>
-        {" "}
-        &gt; REVIEW
-      </div>
-      <section style={{ maxWidth: "960px", margin: "0 auto", padding: "20px 24px 0" }}>
-        <h1 style={{ margin: "0", font: "800 40px Archivo,sans-serif", letterSpacing: ".04em" }}>
-          REVIEW
-        </h1>
-        <p style={{ margin: "10px 0 0", fontSize: "14px", color: "#555" }}>
-          구매 후기 보기
-        </p>
-        <div style={{ display: "flex", gap: "48px", flexWrap: "wrap", marginTop: "28px", padding: "28px", background: "#f4f2ee" }}>
-          <div>
-            <div style={{ font: "700 12px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>
-              평균 평점
-            </div>
-            <div style={{ marginTop: "6px", font: "800 32px Archivo,sans-serif" }}>
-              [0.0]
-              {" "}
-              <span style={{ fontSize: "16px", color: "#767676" }}>
-                / 5
-              </span>
-            </div>
-          </div>
-          <div>
-            <div style={{ font: "700 12px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>
-              전체 후기
-            </div>
-            <div style={{ marginTop: "6px", font: "800 32px Archivo,sans-serif" }}>
-              [000]
-            </div>
-          </div>
+      <div style={crumb}><Link href="/" style={{ color: "#767676" }}>HOME</Link> &gt; REVIEW</div>
+      <section style={{ ...pageWrap, maxWidth: 960, margin: "0 auto" }}>
+        <h1 style={h1}>REVIEW</h1>
+        <p style={subtitle}>{product ? <>‘{product.name}’ 후기 · <Link href="/review" style={{ borderBottom: "1px solid #555" }}>전체 후기 보기</Link></> : "구매 후기"}</p>
+        <div style={{ ...box, display: "flex", gap: 48, flexWrap: "wrap", marginTop: 28 }}>
+          <div><div style={{ font: "700 12px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>평균 평점</div><div style={{ marginTop: 6, font: "800 32px Archivo,sans-serif" }}>{agg._avg.rating ? agg._avg.rating.toFixed(1) : "-"} <span style={{ fontSize: 16, color: "#767676" }}>/ 5</span></div></div>
+          <div><div style={{ font: "700 12px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>후기 수</div><div style={{ marginTop: 6, font: "800 32px Archivo,sans-serif" }}>{total}</div></div>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "28px" }}>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #111", background: "#111", color: "#fff", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            전체
-          </a>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #ccc", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            포토 후기
-          </a>
-          <a href="#" style={{ padding: "10px 18px", border: "1px solid #ccc", font: "500 13px 'Noto Sans KR',sans-serif" }}>
-            텍스트 후기
-          </a>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginTop: "28px", padding: "16px 0", borderTop: "1px solid #111", borderBottom: "1px solid #e5e5e5", fontSize: "13px" }}>
-          <span style={{ display: "flex", gap: "18px" }}>
-            <a href="#" style={{ fontWeight: "700" }}>
-              최신순
-            </a>
-            <a href="#" style={{ color: "#767676" }}>
-              평점 높은순
-            </a>
-            <a href="#" style={{ color: "#767676" }}>
-              평점 낮은순
-            </a>
-          </span>
-          <Link href="/review/write" style={{ background: "#111", color: "#fff", padding: "10px 20px", font: "700 12px Archivo,sans-serif", letterSpacing: ".08em" }}>
-            WRITE
-          </Link>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "24px", padding: "28px 0", borderBottom: "1px solid #e5e5e5" }}>
-          <div style={{ aspectRatio: "4/5", background: "#e6e3de" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, paddingBottom: 16, borderBottom: "1px solid #111" }}><Link href={productId ? `/review/write?product=${productId}` : "/review/write"} style={darkBtn}>WRITE</Link></div>
+        {rows.length === 0 && <div style={{ padding: "48px 0", fontSize: 14, color: "#767676" }}>아직 후기가 없어요. 구매한 상품의 첫 후기를 남겨 보세요.</div>}
+        {rows.map((r) => (
+          <div key={r.id} style={{ padding: "28px 0", borderBottom: "1px solid #e5e5e5" }}>
+            <div aria-label={`별점 ${r.rating}점`} style={{ font: "700 15px Archivo,sans-serif", letterSpacing: ".1em" }}>{stars(r.rating)}</div>
+            <Link href={`/product/${r.product.id}`} style={{ display: "block", marginTop: 8, fontSize: 14, color: "#555" }}>{r.product.name}</Link>
+            <p style={{ margin: "14px 0 0", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-line" }}>{r.content}</p>
+            <div style={{ marginTop: 14, fontSize: 12, color: "#767676" }}>{maskName(r.user.name)} · {fmtDate(r.createdAt)}</div>
           </div>
-          <div>
-            <div style={{ font: "700 15px Archivo,sans-serif", letterSpacing: ".1em", color: "#111" }} aria-label="별점 [0]점">
-              ★★★★★
-            </div>
-            <Link href="/product" style={{ display: "block", marginTop: "8px", font: "500 14px 'Noto Sans KR',sans-serif", color: "#555" }}>
-              [상품명]
-            </Link>
-            <div style={{ marginTop: "2px", fontSize: "12px", color: "#767676" }}>
-              COLOR [색상] / SIZE [사이즈]
-            </div>
-            <p style={{ margin: "14px 0 0", fontSize: "14px", lineHeight: "1.8", color: "#222" }}>
-              [후기 내용을 입력하세요]
-            </p>
-            <div style={{ marginTop: "14px", fontSize: "12px", color: "#767676" }}>
-              [닉네임] · [YYYY.MM.DD]
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "24px", padding: "28px 0", borderBottom: "1px solid #e5e5e5" }}>
-          <div style={{ aspectRatio: "4/5", background: "#ddd8d0" }}>
-          </div>
-          <div>
-            <div style={{ font: "700 15px Archivo,sans-serif", letterSpacing: ".1em", color: "#111" }} aria-label="별점 [0]점">
-              ★★★★★
-            </div>
-            <Link href="/product" style={{ display: "block", marginTop: "8px", font: "500 14px 'Noto Sans KR',sans-serif", color: "#555" }}>
-              [상품명]
-            </Link>
-            <div style={{ marginTop: "2px", fontSize: "12px", color: "#767676" }}>
-              COLOR [색상] / SIZE [사이즈]
-            </div>
-            <p style={{ margin: "14px 0 0", fontSize: "14px", lineHeight: "1.8", color: "#222" }}>
-              [후기 내용을 입력하세요]
-            </p>
-            <div style={{ marginTop: "14px", fontSize: "12px", color: "#767676" }}>
-              [닉네임] · [YYYY.MM.DD]
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "24px", padding: "28px 0", borderBottom: "1px solid #e5e5e5" }}>
-          <div style={{ aspectRatio: "4/5", background: "#e6e3de" }}>
-          </div>
-          <div>
-            <div style={{ font: "700 15px Archivo,sans-serif", letterSpacing: ".1em", color: "#111" }} aria-label="별점 [0]점">
-              ★★★★★
-            </div>
-            <Link href="/product" style={{ display: "block", marginTop: "8px", font: "500 14px 'Noto Sans KR',sans-serif", color: "#555" }}>
-              [상품명]
-            </Link>
-            <div style={{ marginTop: "2px", fontSize: "12px", color: "#767676" }}>
-              COLOR [색상] / SIZE [사이즈]
-            </div>
-            <p style={{ margin: "14px 0 0", fontSize: "14px", lineHeight: "1.8", color: "#222" }}>
-              [후기 내용을 입력하세요]
-            </p>
-            <div style={{ marginTop: "14px", fontSize: "12px", color: "#767676" }}>
-              [닉네임] · [YYYY.MM.DD]
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "24px", padding: "28px 0", borderBottom: "1px solid #e5e5e5" }}>
-          <div style={{ aspectRatio: "4/5", background: "#ddd8d0" }}>
-          </div>
-          <div>
-            <div style={{ font: "700 15px Archivo,sans-serif", letterSpacing: ".1em", color: "#111" }} aria-label="별점 [0]점">
-              ★★★★★
-            </div>
-            <Link href="/product" style={{ display: "block", marginTop: "8px", font: "500 14px 'Noto Sans KR',sans-serif", color: "#555" }}>
-              [상품명]
-            </Link>
-            <div style={{ marginTop: "2px", fontSize: "12px", color: "#767676" }}>
-              COLOR [색상] / SIZE [사이즈]
-            </div>
-            <p style={{ margin: "14px 0 0", fontSize: "14px", lineHeight: "1.8", color: "#222" }}>
-              [후기 내용을 입력하세요]
-            </p>
-            <div style={{ marginTop: "14px", fontSize: "12px", color: "#767676" }}>
-              [닉네임] · [YYYY.MM.DD]
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "24px", padding: "28px 0", borderBottom: "1px solid #e5e5e5" }}>
-          <div style={{ aspectRatio: "4/5", background: "#e6e3de" }}>
-          </div>
-          <div>
-            <div style={{ font: "700 15px Archivo,sans-serif", letterSpacing: ".1em", color: "#111" }} aria-label="별점 [0]점">
-              ★★★★★
-            </div>
-            <Link href="/product" style={{ display: "block", marginTop: "8px", font: "500 14px 'Noto Sans KR',sans-serif", color: "#555" }}>
-              [상품명]
-            </Link>
-            <div style={{ marginTop: "2px", fontSize: "12px", color: "#767676" }}>
-              COLOR [색상] / SIZE [사이즈]
-            </div>
-            <p style={{ margin: "14px 0 0", fontSize: "14px", lineHeight: "1.8", color: "#222" }}>
-              [후기 내용을 입력하세요]
-            </p>
-            <div style={{ marginTop: "14px", fontSize: "12px", color: "#767676" }}>
-              [닉네임] · [YYYY.MM.DD]
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "56px" }}>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", borderBottom: "2px solid #111" }}>
-            1
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            2
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            3
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            4
-          </a>
-          <a href="#" style={{ minWidth: "40px", padding: "10px 0", textAlign: "center", font: "700 14px Archivo,sans-serif", color: "#767676" }}>
-            →
-          </a>
-        </div>
+        ))}
+        <Pager page={page} pages={Math.ceil(total / PER)} base="/review" params={{ product: productId ? String(productId) : undefined }} />
       </section>
     </>
   );

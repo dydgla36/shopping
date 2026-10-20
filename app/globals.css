@@ -24,4 +24,6 @@ a{color:#111;text-decoration:none}a:hover{color:#6b6b6b}
 .nav button{font:700 13px/1 Archivo,sans-serif;letter-spacing:.06em;background:none;border:0;padding:0;color:#111;cursor:pointer}
 .nav button:hover{color:#6b6b6b}
 .btn:disabled{opacity:.6;cursor:default}
+.fld textarea,.fld select{display:block;box-sizing:border-box;width:100%;margin-top:8px;padding:15px 14px;border:1px solid #ccc;font:400 15px 'Noto Sans KR',sans-serif;background:#fff}
+.fld textarea{resize:vertical}
 .opt:disabled+label{opacity:.4;cursor:not-allowed;text-decoration:line-through}
