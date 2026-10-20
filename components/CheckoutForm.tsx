@@ -11,7 +11,7 @@ type Props = {
   discountText: string;
   totalText: string;
   defaults: { name: string; phone: string; email: string };
-  hidden: { productId: string; size: string; qty: string };
+  hidden: { productId: string; size: string; qty: string; cart: string };
 };
 
 const heading = { font: "800 16px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".06em" } as const;
@@ -27,6 +27,7 @@ export default function CheckoutForm({ items, itemsTotalText, shippingText, disc
         <input type="hidden" name="productId" value={hidden.productId} />
         <input type="hidden" name="size" value={hidden.size} />
         <input type="hidden" name="qty" value={hidden.qty} />
+        <input type="hidden" name="cart" value={hidden.cart} />
         <div style={sec}>주문자 정보</div>
         <label className="fld">이름<input name="ordererName" type="text" defaultValue={defaults.name} placeholder="이름을 입력하세요" required /></label>
         <label className="fld">휴대전화<input name="ordererPhone" type="tel" defaultValue={defaults.phone} placeholder="010-0000-0000" required /></label>

@@ -20,6 +20,9 @@ model Product {
   position  Int      @default(0)
   createdAt DateTime @default(now())
   orderItems OrderItem[]
+  cartItems  CartItem[]
+  wishlist   WishlistItem[]
+  stocks     ProductStock[]
 
   @@unique([category, name])
   @@index([category, position])
@@ -40,6 +43,8 @@ model User {
   updatedAt      DateTime @updatedAt
   sessions       Session[]
   orders         Order[]
+  cartItems      CartItem[]
+  wishlist       WishlistItem[]
 }
 
 // 로그인 상태 (브라우저 쿠키에 id를 저장하고, 이 테이블에서 확인합니다)
@@ -105,4 +110,44 @@ model ProductImage {
   size      Int // 바이트
   data      Bytes
   createdAt DateTime @default(now())
+}
+
+// 장바구니 (로그인한 회원별). 같은 상품이라도 사이즈가 다르면 다른 줄입니다.
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String   @default("M")
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId, size])
+  @@index([userId])
+}
+
+// 관심 상품 (로그인한 회원별)
+model WishlistItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+// 사이즈별 재고. 행이 있는 사이즈만 재고를 관리하고, 행이 없는 사이즈는 무제한입니다. (quantity 0 = 품절)
+model ProductStock {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String
+  quantity  Int     @default(0)
+
+  @@unique([productId, size])
 }

@@ -24,3 +24,4 @@ a{color:#111;text-decoration:none}a:hover{color:#6b6b6b}
 .nav button{font:700 13px/1 Archivo,sans-serif;letter-spacing:.06em;background:none;border:0;padding:0;color:#111;cursor:pointer}
 .nav button:hover{color:#6b6b6b}
 .btn:disabled{opacity:.6;cursor:default}
+.opt:disabled+label{opacity:.4;cursor:not-allowed;text-decoration:line-through}

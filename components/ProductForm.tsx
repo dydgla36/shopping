@@ -8,10 +8,38 @@ import { won } from "@/lib/orders";
 import { btnDark, input, notice } from "@/app/admin/styles";
 
 const COLORS = ["#e6e3de", "#ddd8d0", "#d6d6d6", "#dcdcdc", "#e8dcd2", "#d9e0e3"];
-const MAX_BYTES = 4 * 1024 * 1024;
+const MAX_ORIGINAL = 20 * 1024 * 1024; // 고를 수 있는 원본 파일 크기
+const MAX_UPLOAD = 2 * 1024 * 1024; // 서버로 보내는 파일 크기 (줄인 뒤)
+
+// 올리기 전에 이미지를 줄입니다. (가로 1200px 이하, JPEG) 움직이는 GIF와 이미 작은 파일은 그대로 올립니다.
+async function prepare(file: File): Promise<Blob | null> {
+  if (file.type === "image/gif" && file.size <= MAX_UPLOAD) return file;
+  const bitmap = await createImageBitmap(file).catch(() => {
+    throw new Error("이미지를 읽을 수 없어요. 다른 파일로 시도해 주세요.");
+  });
+  try {
+    if (bitmap.width <= 1200 && file.size <= 700 * 1024) return file;
+    for (const [width, quality] of [[1200, 0.85], [900, 0.75], [600, 0.7]] as const) {
+      const scale = Math.min(1, width / bitmap.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.fillStyle = "#fff"; // 투명한 부분은 흰색으로
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+      if (blob && blob.size <= MAX_UPLOAD) return blob;
+    }
+    return null;
+  } finally {
+    bitmap.close();
+  }
+}
 const label = { display: "block", marginTop: 18, fontSize: 12, color: "#767676" } as const;
 
-export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null };
+export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; stock: Record<string, number> };
 
 // 상품 추가(product 없음)와 상품 수정(product 있음)에 같이 씁니다.
 export default function ProductForm({ categories, product }: { categories: string[]; product?: ProductInit }) {
@@ -26,9 +54,12 @@ export default function ProductForm({ categories, product }: { categories: strin
     bg: product?.bg ?? COLORS[0],
     imageUrl: product?.imageUrl ?? "",
     description: product?.description ?? "",
+    stockS: product && product.stock.S !== undefined ? String(product.stock.S) : "",
+    stockM: product && product.stock.M !== undefined ? String(product.stock.M) : "",
+    stockL: product && product.stock.L !== undefined ? String(product.stock.L) : "",
   });
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((p) => ({ ...p, [k]: e.target.value }));
-  const imageOk = /^https?:\/\//i.test(v.imageUrl);
+  const imageOk = /^(https?:\/\/|\/api\/product-image\/)/i.test(v.imageUrl);
 
   // 입력한 이미지 주소가 실제로 열리는지 브라우저에서 확인합니다.
   const [check, setCheck] = useState<{ state: "idle" | "loading" | "ok" | "error"; size?: string }>({ state: "idle" });
@@ -61,17 +92,19 @@ export default function ProductForm({ categories, product }: { categories: strin
     if (!file) return;
     setUploadMsg(null);
     if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) return setUploadMsg({ ok: false, text: "JPG, PNG, WEBP, GIF 파일만 올릴 수 있어요." });
-    if (file.size > MAX_BYTES) return setUploadMsg({ ok: false, text: "파일은 4MB 이하여야 해요." });
+    if (file.size > MAX_ORIGINAL) return setUploadMsg({ ok: false, text: "원본 파일은 20MB 이하여야 해요." });
     setUploading(true);
     try {
+      const prepared = await prepare(file);
+      if (!prepared) throw new Error("이미지를 줄여도 2MB를 넘어요. 더 작은 이미지를 올려 주세요.");
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", prepared, "upload");
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      if (res.status === 413) throw new Error("파일이 너무 커요. 4MB 이하로 올려 주세요.");
+      if (res.status === 413) throw new Error("이미지가 너무 커요. 더 작은 이미지를 올려 주세요.");
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error ?? "업로드에 실패했어요.");
       setV((p) => ({ ...p, imageUrl: data.url as string }));
-      setUploadMsg({ ok: true, text: "올렸어요. 오른쪽 미리보기에서 확인해 주세요." });
+      setUploadMsg({ ok: true, text: `올렸어요 (${Math.round(prepared.size / 1024)}KB). 오른쪽 미리보기에서 확인해 주세요.` });
     } catch (err) {
       setUploadMsg({ ok: false, text: err instanceof Error ? err.message : "업로드에 실패했어요." });
     } finally {
@@ -81,7 +114,7 @@ export default function ProductForm({ categories, product }: { categories: strin
   // 이미지 주소를 넣었는데 열리지 않으면 저장하지 못하게 막습니다.
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     setFormError(null);
-    if (v.imageUrl && !imageOk) return block("이미지 주소는 http:// 또는 https://로 시작해야 해요.");
+    if (v.imageUrl && !imageOk) return block("이미지는 파일로 올리거나, http:// 또는 https://로 시작하는 주소를 넣어 주세요.");
     if (imageOk && check.state === "loading") return block("이미지를 확인하는 중이에요. 잠시 후 다시 눌러 주세요.");
     if (imageOk && check.state === "error") return block("이미지를 불러올 수 없어요. 주소를 고치거나 비워 주세요.");
     function block(msg: string) {
@@ -123,7 +156,20 @@ export default function ProductForm({ categories, product }: { categories: strin
             ))}
           </div>
         </fieldset>
-        <label style={label}>이미지 파일 올리기 (선택, JPG·PNG·WEBP·GIF, 4MB 이하)
+        <fieldset style={{ ...label, border: 0, padding: 0, marginBottom: 0 }}>
+          <legend style={{ padding: 0 }}>사이즈별 재고 (비우면 재고를 관리하지 않고 무제한, 0이면 품절)</legend>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            {(["S", "M", "L"] as const).map((s) => {
+              const k = `stock${s}` as "stockS" | "stockM" | "stockL";
+              return (
+                <label key={s} style={{ flex: 1, fontSize: 12 }}>{s}
+                  <input name={k} type="number" min={0} value={v[k]} onChange={set(k)} placeholder="무제한" style={{ ...input, marginTop: 4 }} />
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+        <label style={label}>이미지 파일 올리기 (선택, JPG·PNG·WEBP·GIF · 큰 이미지는 자동으로 줄여서 저장해요)
           <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onFile} disabled={uploading} style={{ display: "block", marginTop: 6, fontSize: 13 }} />
         </label>
         {uploading && <div style={{ marginTop: 8, fontSize: 13, color: "#767676" }}>올리는 중...</div>}

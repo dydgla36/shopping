@@ -1,17 +1,16 @@
-import { put } from "@vercel/blob";
-import { randomUUID } from "node:crypto";
+import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
-// 관리자가 상품 이미지 파일을 올리는 주소입니다. (Vercel Blob에 저장)
-// Vercel 함수는 요청 크기가 약 4.5MB로 제한되어 있어서 파일은 4MB까지만 받습니다.
-const MAX = 4 * 1024 * 1024;
+// 관리자가 상품 이미지 파일을 올리는 주소입니다. 파일은 DB(ProductImage 테이블)에 저장됩니다.
+// DB 용량을 아끼려고 2MB까지만 받습니다. (관리자 화면이 큰 이미지는 올리기 전에 자동으로 줄입니다.)
+const MAX = 2 * 1024 * 1024;
 
 // 파일 앞부분(매직 바이트)으로 실제 이미지인지 확인합니다. 브라우저가 알려 준 파일 종류는 믿지 않습니다.
-function sniff(b: Uint8Array): { ext: string; mime: string } | null {
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { ext: "jpg", mime: "image/jpeg" };
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return { ext: "png", mime: "image/png" };
-  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return { ext: "gif", mime: "image/gif" };
-  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return { ext: "webp", mime: "image/webp" };
+function sniff(b: Uint8Array): string | null {
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return "image/gif";
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return "image/webp";
   return null;
 }
 
@@ -29,21 +28,17 @@ export async function POST(req: Request) {
   }
   if (!(file instanceof File)) return fail("파일을 선택해 주세요.", 400);
   if (file.size === 0) return fail("빈 파일이에요.", 400);
-  if (file.size > MAX) return fail("파일은 4MB 이하여야 해요.", 413);
+  if (file.size > MAX) return fail("이미지는 줄여도 2MB를 넘을 수 없어요. 더 작은 이미지를 올려 주세요.", 413);
 
-  const buf = Buffer.from(await file.arrayBuffer());
-  const kind = sniff(buf);
-  if (!kind) return fail("JPG, PNG, WEBP, GIF 이미지 파일만 올릴 수 있어요.", 400);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const mime = sniff(bytes);
+  if (!mime) return fail("JPG, PNG, WEBP, GIF 이미지 파일만 올릴 수 있어요.", 400);
 
   try {
-    const blob = await put(`products/${randomUUID()}.${kind.ext}`, buf, { access: "public", contentType: kind.mime, addRandomSuffix: false });
-    return Response.json({ url: blob.url });
+    const image = await prisma.productImage.create({ data: { mime, size: bytes.length, data: bytes }, select: { id: true } });
+    return Response.json({ url: `/api/product-image/${image.id}` });
   } catch (e) {
-    console.error("이미지 업로드 실패:", e);
-    const noToken = e instanceof Error && /token/i.test(e.message);
-    return fail(
-      noToken ? "파일 저장소(Vercel Blob)가 아직 연결되지 않았어요. README의 '이미지 파일 올리기'를 따라 연결해 주세요." : "파일 저장 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.",
-      noToken ? 503 : 500,
-    );
+    console.error("이미지 저장 실패:", e);
+    return fail("이미지 저장 중 문제가 생겼어요. 'ProductImage' 테이블을 만들었는지 확인해 주세요.", 500);
   }
 }

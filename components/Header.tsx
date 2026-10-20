@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { logout } from "@/app/actions/auth";
 
 const nav = [
@@ -12,6 +13,15 @@ const nav = [
 
 export default async function Header() {
   const user = await getCurrentUser();
+  // 장바구니에 담긴 상품 개수 (장바구니 테이블이 아직 없어도 헤더는 깨지지 않게 합니다)
+  let cartCount = 0;
+  if (user) {
+    try {
+      cartCount = (await prisma.cartItem.aggregate({ _sum: { quantity: true }, where: { userId: user.id } }))._sum.quantity ?? 0;
+    } catch (e) {
+      console.error("장바구니 개수 조회 실패:", e);
+    }
+  }
   const util = [
     ["REVIEW", "/review"],
     ["Q&A", "/qna"],
@@ -20,7 +30,7 @@ export default async function Header() {
     ...(user?.role === "ADMIN" ? [["ADMIN", "/admin"]] : []),
     ...(user ? [] : [["LOGIN", "/login"]]),
     ["MY PAGE", "/mypage"],
-    ["CART (0)", "/cart"],
+    [`CART (${cartCount})`, "/cart"],
   ];
 
   return (

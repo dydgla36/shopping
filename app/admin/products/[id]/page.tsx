@@ -13,6 +13,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!Number.isInteger(id)) notFound();
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) notFound();
+  const stockRows = await prisma.productStock.findMany({ where: { productId: id } }).catch(() => []);
+  const stock = Object.fromEntries(stockRows.map((r) => [r.size, r.quantity]));
 
   return (
     <>
@@ -21,7 +23,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <p style={{ margin: "8px 0 0", fontSize: 13 }}>
         <Link href={`/product/${product.id}`} style={{ borderBottom: "1px solid #111" }}>상품 상세 페이지 보기</Link>
       </p>
-      <ProductForm categories={Object.keys(lists)} product={product} />
+      <ProductForm
+        categories={Object.keys(lists)}
+        product={{ id: product.id, category: product.category, name: product.name, price: product.price, sale: product.sale, position: product.position, bg: product.bg, imageUrl: product.imageUrl, description: product.description, stock }}
+      />
     </>
   );
 }
