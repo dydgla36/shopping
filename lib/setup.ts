@@ -5,6 +5,10 @@ export const SETUP_STATEMENTS: string[] = [
   "ALTER TABLE \"User\" ADD COLUMN IF NOT EXISTS \"role\" TEXT NOT NULL DEFAULT 'USER'",
   "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"carrier\" TEXT",
   "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"trackingNumber\" TEXT",
+  "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"adminMemo\" TEXT",
+  "ALTER TABLE \"Order\" ALTER COLUMN \"userId\" DROP NOT NULL",
+  "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"guestToken\" TEXT",
+  "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"postcode\" TEXT",
   "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"pointsUsed\" INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"userCouponId\" INTEGER",
   "ALTER TABLE \"Product\" ADD COLUMN IF NOT EXISTS \"imageUrl\" TEXT",
@@ -35,4 +39,5 @@ export const SETUP_STATEMENTS: string[] = [
   "CREATE INDEX IF NOT EXISTS \"PointLog_userId_createdAt_idx\" ON \"PointLog\"(\"userId\", \"createdAt\")",
   "CREATE TABLE IF NOT EXISTS \"PasswordReset\" (\"id\" TEXT PRIMARY KEY, \"userId\" INTEGER NOT NULL REFERENCES \"User\"(\"id\") ON DELETE CASCADE ON UPDATE CASCADE, \"tokenHash\" TEXT NOT NULL, \"expiresAt\" TIMESTAMP(3) NOT NULL, \"usedAt\" TIMESTAMP(3), \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)",
   "CREATE UNIQUE INDEX IF NOT EXISTS \"PasswordReset_tokenHash_key\" ON \"PasswordReset\"(\"tokenHash\")",
+  "CREATE TABLE IF NOT EXISTS \"RateLimit\" (\"key\" TEXT PRIMARY KEY, \"count\" INTEGER NOT NULL DEFAULT 0, \"windowStart\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, \"lockedUntil\" TIMESTAMP(3))",
 ];

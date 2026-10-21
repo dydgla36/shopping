@@ -12,10 +12,6 @@ export const lists: Record<string, ListConfig> = {
       { name: "데님 셔츠", price: "₩145,000", bg: B },
       { name: "퍼 트림 후드 집업", price: "₩193,000", bg: G, sale: "7%" },
       { name: "밀리터리 셋업", price: "₩119,000", bg: B },
-      { name: "레더 재킷", price: "₩194,000", bg: D, sale: "7%" },
-      { name: "헨리넥 니트", price: "₩80,000", bg: L, sale: "7%" },
-      { name: "와이드 팬츠", price: "₩101,000", bg: D },
-      { name: "후디드 봄버", price: "₩205,000", bg: L },
       { name: "스트라이프 가디건 세트", price: "₩118,000", bg: G },
       { name: "레이어드 니트", price: "₩89,000", bg: B },
       { name: "오프숄더 스카프 스웨터", price: "₩142,000", bg: G },
@@ -23,24 +19,14 @@ export const lists: Record<string, ListConfig> = {
     ],
   },
   new: {
-    title: "NEW · 7%", sub: "신상품 7% 할인 · 3일 한정", chips: ["전체", "WOMEN", "MEN"],
+    title: "NEW · 7%", sub: "신상품 7% 할인 · 3일 한정", chips: base,
     items: [
       { name: "벨티드 코트", price: "₩276,000", bg: G, sale: "7%" },
       { name: "퍼 트림 후드 집업", price: "₩193,000", bg: B, sale: "7%" },
-      { name: "레더 재킷", price: "₩194,000", bg: D, sale: "7%" },
-      { name: "헨리넥 니트", price: "₩80,000", bg: D, sale: "7%" },
       { name: "데님 셔츠", price: "₩145,000", bg: B, sale: "7%" },
       { name: "밀리터리 셋업", price: "₩119,000", bg: G, sale: "7%" },
-      { name: "와이드 팬츠", price: "₩101,000", bg: D, sale: "7%" },
       { name: "레이어드 니트", price: "₩89,000", bg: B, sale: "7%" },
     ],
-  },
-  men: {
-    title: "MEN", sub: "남성 컬렉션", chips: base,
-    items: [
-      ["레더 재킷", "₩194,000"], ["봄버 재킷", "₩205,000"], ["블레이저", "₩158,000"], ["헨리넥 니트", "₩80,000"],
-      ["오버핏 셔츠", "₩98,000"], ["카고 팬츠", "₩89,000"], ["와이드 슬랙스", "₩101,000"], ["후디", "₩79,000"],
-    ].map(([name, price]) => ({ name, price, bg: D })),
   },
   women: {
     title: "WOMEN", sub: "여성 컬렉션", chips: ["전체", "아우터", "상의", "하의", "드레스", "셋업", "신발 / 악세서리"],

@@ -33,3 +33,7 @@ export const DISCOUNT = 0;
 export const CLAIM_TYPE: Record<string, string> = { CANCEL: "취소", RETURN: "반품", EXCHANGE: "교환" };
 export const CLAIM_STATUS: Record<string, string> = { RECEIVED: "접수", PROCESSING: "처리 중", DONE: "완료", REJECTED: "거절" };
 export const EARN_REASON = "구매 적립";
+
+// 우편번호가 있으면 앞에 붙여 보여줍니다.
+export const fullAddress = (o: { postcode?: string | null; address: string; addressDetail?: string | null }) =>
+  `${o.postcode ? `(${o.postcode}) ` : ""}${o.address}${o.addressDetail ? ` ${o.addressDetail}` : ""}`;

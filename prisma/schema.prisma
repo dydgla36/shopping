@@ -69,8 +69,8 @@ model Session {
 model Order {
   id             Int         @id @default(autoincrement())
   orderNumber    String      @unique // 화면에 보여줄 주문번호
-  userId         Int
-  user           User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  userId         Int? // 비회원 주문은 비어 있습니다
+  user           User?       @relation(fields: [userId], references: [id], onDelete: Restrict)
   status         String      @default("PENDING") // PENDING 접수 / PAID 결제 완료 / PREPARING 배송 준비 / SHIPPING 배송 중 / DELIVERED 배송 완료 / CANCELED 취소
   paymentMethod  String // 신용카드, 계좌이체, 무통장입금, 카카오페이
   itemsTotal     Int // 상품금액 합계
@@ -89,6 +89,9 @@ model Order {
   userCouponId   Int? // 사용한 쿠폰 (취소하면 되돌려 줍니다)
   claims         Claim[]
   carrier        String? // 택배사
+  guestToken     String? // 비회원 주문 조회용 비밀 토큰 (주문 완료 화면·이메일의 링크에 들어갑니다)
+  postcode       String? // 우편번호
+  adminMemo      String? // 관리자가 남기는 메모 (고객의 주문 상세에 "판매자 안내"로 보입니다)
   trackingNumber String? // 운송장 번호
   items          OrderItem[]
   createdAt      DateTime    @default(now())
@@ -269,4 +272,12 @@ model PasswordReset {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+// 횟수 제한 (로그인 실패, 비밀번호 찾기 요청 등)
+model RateLimit {
+  key         String    @id
+  count       Int       @default(0)
+  windowStart DateTime  @default(now())
+  lockedUntil DateTime?
 }
