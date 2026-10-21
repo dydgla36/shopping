@@ -76,13 +76,21 @@ const isDuplicate = (e: unknown) => (e as { code?: string })?.code === "P2002";
 
 export type ProductState = { error?: string } | undefined;
 
+// 할인율: 비우면 할인 없음, 1~99 사이의 정수면 "7%" 형태로 저장, 그 밖의 값이면 false
+function parseSale(v: string): string | null | false {
+  const t = v.replace(/%/g, "").trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isInteger(n) && n >= 1 && n <= 99 ? `${n}%` : false;
+}
+
 function readProduct(formData: FormData) {
   return {
     category: str(formData, "category"),
     name: str(formData, "name"),
     price: Number(str(formData, "price")),
     positionRaw: str(formData, "position"),
-    sale: str(formData, "sale") || null,
+    sale: parseSale(str(formData, "sale")),
     bg: cleanColor(str(formData, "bg")),
     image: cleanImage(str(formData, "imageUrl")),
     description: str(formData, "description").slice(0, 2000) || null,
@@ -95,6 +103,7 @@ function checkProduct(d: ReturnType<typeof readProduct>): string | null {
   if (!d.name) return "상품 이름을 입력해 주세요.";
   if (!Number.isInteger(d.price) || d.price < 0) return "가격은 0 이상의 숫자(원 단위)로 입력해 주세요.";
   if (d.image === false) return IMG_ERR;
+  if (d.sale === false) return "할인율은 1~99 사이의 숫자로 입력해 주세요.";
   return null;
 }
 
@@ -135,7 +144,7 @@ export async function createProduct(_prev: ProductState, formData: FormData): Pr
         name: d.name,
         price: d.price,
         bg: d.bg,
-        sale: d.sale,
+        sale: d.sale as string | null,
         position,
         imageUrl: d.image as string | null,
         description: d.description,
@@ -166,7 +175,7 @@ export async function updateProduct(_prev: ProductState, formData: FormData): Pr
       oldImage = (await tx.product.findUnique({ where: { id }, select: { imageUrl: true } }))?.imageUrl;
       await tx.product.update({
         where: { id },
-        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description },
+        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale as string | null, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description },
       });
       for (const size of SIZES) {
         const quantity = st.stock[size];

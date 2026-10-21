@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", background: "#fff", color: "#111", fontFamily: "'Noto Sans KR',sans-serif" }}>
           <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "11px 16px", fontSize: 13 }}>
-            카카오 간편 가입 시 5% 쿠폰 · 신상품 7% 할인 3일 한정
+            카카오 간편 가입 시 5% 쿠폰
           </div>
           <Header />
           {children}

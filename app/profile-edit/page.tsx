@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ActionForm from "@/components/ActionForm";
+import PhoneInput from "@/components/PhoneInput";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { changePassword, updateProfile } from "@/app/actions/account";
@@ -25,7 +26,7 @@ export default async function Page() {
           <label className="fld">아이디<input type="text" value={user.loginId} readOnly disabled style={{ background: "#f4f2ee" }} /></label>
           <label className="fld">이름<input name="name" type="text" defaultValue={user.name} required /></label>
           <label className="fld">이메일<input name="email" type="email" defaultValue={user.email} required /></label>
-          <label className="fld">휴대전화<input name="phone" type="tel" defaultValue={user.phone} required /></label>
+          <label className="fld">휴대전화<PhoneInput name="phone" defaultValue={user.phone} required /></label>
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13, color: "#555" }}><input name="marketing" type="checkbox" defaultChecked={user.marketingOptIn} /> 마케팅 정보 수신 동의</label>
         </ActionForm>
 

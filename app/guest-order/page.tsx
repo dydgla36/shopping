@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { tokenOk } from "@/lib/guest";
+import { limitedToken, tokenOk } from "@/lib/guest";
+import { maskAddress, maskName, maskPhone } from "@/lib/mask";
 import { STATUS_LABEL, fmtDate, fullAddress, itemOption, won } from "@/lib/orders";
 import { crumb } from "@/lib/ui";
 
@@ -20,7 +21,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   const { no, t } = await searchParams;
   if (!no) notFound();
   const order = await prisma.order.findUnique({ where: { orderNumber: no }, include: { items: true } });
-  if (!order || order.userId !== null || !tokenOk(order.guestToken, t)) notFound();
+  if (!order || order.userId !== null) notFound();
+  // 전체 토큰(주문 완료 화면·메일 링크)이면 전체 정보, 이름+전화번호 조회로 받은 제한 토큰이면 일부를 가려서 보여줍니다.
+  const full = tokenOk(order.guestToken, t);
+  const limited = !full && order.guestToken !== null && tokenOk(limitedToken(order.guestToken), t);
+  if (!full && !limited) notFound();
 
   return (
     <>
@@ -56,11 +61,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           </div>
         ))}
 
+        {limited && <p style={{ margin: "24px 0 0", padding: "12px 16px", background: "#f4f2ee", fontSize: 12, lineHeight: 1.7, color: "#555" }}>이름·전화번호로 조회한 화면이라 개인정보 보호를 위해 배송지와 연락처를 일부만 보여줘요. 전체 정보는 주문 완료 화면이나 주문 확인 메일의 링크에서 볼 수 있어요.</p>}
         <Title>배송 정보</Title>
-        <Row a="수령인" b={order.recipientName} />
-        <Row a="연락처" b={order.recipientPhone} />
-        <Row a="주소" b={fullAddress(order)} />
-        <Row a="배송 메모" b={order.deliveryMemo ?? "-"} />
+        <Row a="수령인" b={full ? order.recipientName : maskName(order.recipientName)} />
+        <Row a="연락처" b={full ? order.recipientPhone : maskPhone(order.recipientPhone)} />
+        <Row a="주소" b={full ? fullAddress(order) : maskAddress(order.address)} />
+        <Row a="배송 메모" b={full ? order.deliveryMemo ?? "-" : "-"} />
 
         <Title>결제 정보</Title>
         <Row a="결제 수단" b={order.paymentMethod} />

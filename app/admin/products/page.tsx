@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { deleteProduct, deleteRemovedCategoryProducts } from "@/app/actions/admin";
 import { lists } from "@/lib/lists";
-import { won } from "@/lib/orders";
+import { saleRate, unitPrice, won } from "@/lib/orders";
 import { LOW_STOCK, groupStock } from "@/lib/stock";
 import { SIZES } from "@/lib/checkout";
 import { bodyRow, btnDark, btnLine, h2, headRow, notice } from "../styles";
@@ -43,7 +43,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
             <div key={p.id} style={bodyRow(cols)}>
               <span style={{ color: "#767676" }}>{p.category}</span>
               <Link href={`/admin/products/${p.id}`} style={{ borderBottom: "1px solid #ccc", width: "fit-content" }}>{p.name}</Link>
-              <span style={{ fontFamily: "Archivo,sans-serif" }}>{won(p.price)}</span>
+              <span style={{ fontFamily: "Archivo,sans-serif" }}>{saleRate(p.sale) ? <>{won(unitPrice(p))}<br /><s style={{ fontSize: 11, color: "#767676" }}>{won(p.price)}</s></> : won(p.price)}</span>
               <span>{p.sale ?? "-"}</span>
               <span>{p.position}</span>
               <span style={{ fontSize: 12 }}>

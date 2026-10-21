@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { SIZES } from "@/lib/checkout";
 import { LOW_STOCK, soldOutOf, stockMap, type StockMap } from "@/lib/stock";
-import { won } from "@/lib/orders";
+import { priceView, won } from "@/lib/orders";
 import { addToCart, buyNow } from "@/app/actions/cart";
 import { toggleWishlist } from "@/app/actions/wishlist";
 import { maskName } from "@/lib/mask";
@@ -51,6 +51,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     prisma.review.aggregate({ where: { productId: product.id }, _avg: { rating: true }, _count: { _all: true } }).catch(() => null),
   ]);
   const soldOut = soldOutOf(stock);
+  const pv = priceView(product.price, product.sale);
   const firstAvailable = ["M", ...SIZES].find((s) => stock[s] !== 0) ?? "M"; // 품절이 아닌 사이즈를 기본 선택
 
   return (
@@ -74,8 +75,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <div style={{ font: "700 13px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>[브랜드명]</div>
           <h1 style={{ margin: "10px 0 0", font: "700 28px/1.35 'Noto Sans KR',sans-serif" }}>{product.name}</h1>
           <div style={{ marginTop: 14, font: "800 24px Archivo,sans-serif" }}>
-            {product.sale && <em style={{ color: "#c0392b", fontStyle: "normal", marginRight: 10 }}>{product.sale}</em>}
-            {won(product.price)}
+            {pv.finalPrice ? (
+              <>
+                <s style={{ marginRight: 10, fontSize: 16, fontWeight: 400, color: "#767676" }}>{pv.price}</s>
+                <em style={{ color: "#c0392b", fontStyle: "normal", marginRight: 10 }}>{product.sale}</em>
+                {pv.finalPrice}
+              </>
+            ) : (
+              pv.price
+            )}
           </div>
           {product.description && (
             <p style={{ margin: "18px 0 0", fontSize: 14, lineHeight: 1.8, color: "#444", whiteSpace: "pre-line" }}>{product.description}</p>
@@ -140,7 +148,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <div style={{ marginBottom: 28, font: "800 26px Archivo,sans-serif" }}>YOU MAY ALSO LIKE</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "28px 20px" }}>
             {related.map((p) => (
-              <ProductCard key={p.id} id={p.id} name={p.name} price={won(p.price)} bg={p.bg} sale={p.sale ?? undefined} imageUrl={p.imageUrl ?? undefined} />
+              <ProductCard key={p.id} id={p.id} name={p.name} {...priceView(p.price, p.sale)} bg={p.bg} sale={p.sale ?? undefined} imageUrl={p.imageUrl ?? undefined} />
             ))}
           </div>
         </section>

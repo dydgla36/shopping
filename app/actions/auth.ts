@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { formatPhone, phoneOk } from "@/lib/validate";
 import { clearLimit, clientIp, lockedSeconds, recordFailure } from "@/lib/rateLimit";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
 
@@ -20,7 +21,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   const name = str(formData, "name");
   const email = str(formData, "email").toLowerCase();
-  const phone = str(formData, "phone");
+  const phone = formatPhone(str(formData, "phone"));
 
   if (!/^[A-Za-z0-9]{4,16}$/.test(loginId)) return { error: "아이디는 영문, 숫자 4~16자로 입력해 주세요." };
   if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
@@ -28,7 +29,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
   if (password !== passwordConfirm) return { error: "비밀번호 확인이 일치하지 않아요." };
   if (!name) return { error: "이름을 입력해 주세요." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "이메일 형식을 확인해 주세요." };
-  if (!/^[0-9-]{9,13}$/.test(phone)) return { error: "휴대전화 번호를 확인해 주세요." };
+  if (!phoneOk(phone)) return { error: "휴대전화 번호를 확인해 주세요." };
   if (formData.get("terms") !== "on" || formData.get("privacy") !== "on")
     return { error: "필수 약관에 동의해 주세요." };
 

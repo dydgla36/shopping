@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, requireUser, verifyPassword } from "@/lib/auth";
 import { emailConfigured, sendEmail } from "@/lib/email";
 import { maskLoginId } from "@/lib/mask";
-import { emailOk, passwordProblem, phoneOk } from "@/lib/validate";
+import { emailOk, formatPhone, passwordProblem, phoneOk } from "@/lib/validate";
 import { isDuplicate } from "@/lib/errors";
 import { clientIp, hit } from "@/lib/rateLimit";
 import type { ActionState } from "@/components/ActionForm";
@@ -19,7 +19,7 @@ export async function updateProfile(_prev: ActionState, formData: FormData): Pro
   const user = await requireUser("/profile-edit");
   const name = str(formData, "name");
   const email = str(formData, "email").toLowerCase();
-  const phone = str(formData, "phone");
+  const phone = formatPhone(str(formData, "phone"));
   if (!name) return { error: "이름을 입력해 주세요." };
   if (!emailOk(email)) return { error: "이메일 형식을 확인해 주세요." };
   if (!phoneOk(phone)) return { error: "휴대전화 번호를 확인해 주세요." };

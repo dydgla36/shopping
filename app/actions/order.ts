@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { randomInt } from "node:crypto";
 import { prisma } from "@/lib/db";
+import { formatPhone, phoneOk } from "@/lib/validate";
 import { getCurrentUser } from "@/lib/auth";
 import { SHIPPING_FEE } from "@/lib/orders";
 import { resolveLines } from "@/lib/checkout";
@@ -21,10 +22,10 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   const s = (key: string) => String(formData.get(key) ?? "").trim();
 
   const ordererName = s("ordererName");
-  const ordererPhone = s("ordererPhone");
+  const ordererPhone = formatPhone(s("ordererPhone"));
   const ordererEmail = s("ordererEmail");
   const recipientName = s("recipientName");
-  const recipientPhone = s("recipientPhone");
+  const recipientPhone = formatPhone(s("recipientPhone"));
   const postcode = s("postcode").slice(0, 10);
   const address = s("address");
   const addressDetail = s("addressDetail");
@@ -32,6 +33,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   const paymentMethod = s("pay");
 
   if (!ordererName || !ordererPhone || !ordererEmail) return { error: "주문자 정보를 모두 입력해 주세요." };
+  if (!phoneOk(ordererPhone) || !phoneOk(recipientPhone)) return { error: "휴대전화·연락처 번호를 확인해 주세요. (숫자 9~11자리)" };
   if (!recipientName || !recipientPhone || !address) return { error: "배송 정보(수령인, 연락처, 주소)를 입력해 주세요." };
   if (!PAYMENTS.includes(paymentMethod)) return { error: "결제 수단을 선택해 주세요." };
   if (formData.get("agree") !== "on") return { error: "주문 내용 확인 및 결제 동의에 체크해 주세요." };

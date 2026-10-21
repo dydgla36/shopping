@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { changeCartQty, removeFromCart } from "@/app/actions/cart";
-import { DISCOUNT, SHIPPING_FEE, won } from "@/lib/orders";
+import { DISCOUNT, SHIPPING_FEE, unitPrice, won } from "@/lib/orders";
 import { groupStock } from "@/lib/stock";
 
 export const metadata = { title: "장바구니" };
@@ -14,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   const { notice } = await searchParams;
   const user = await requireUser("/cart");
   const items = await prisma.cartItem.findMany({ where: { userId: user.id }, include: { product: true }, orderBy: { id: "asc" } });
-  const itemsTotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  const itemsTotal = items.reduce((sum, i) => sum + unitPrice(i.product) * i.quantity, 0);
 
   // 담은 뒤 재고가 줄었거나 품절이 된 상품을 찾습니다. (재고 테이블이 없으면 확인하지 않음)
   const stocks = groupStock(await prisma.productStock.findMany({ where: { productId: { in: items.map((i) => i.productId) } } }).catch(() => []));
@@ -55,7 +55,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                 </form>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ font: "800 16px Archivo,sans-serif" }}>{won(i.product.price * i.quantity)}</div>
+                <div style={{ font: "800 16px Archivo,sans-serif" }}>{won(unitPrice(i.product) * i.quantity)}</div>
                 <form action={removeFromCart}>
                   <input type="hidden" name="id" value={i.id} />
                   <button type="submit" style={{ marginTop: 14, padding: 0, background: "none", border: 0, cursor: "pointer", fontSize: 12, color: "#767676" }}>삭제</button>
