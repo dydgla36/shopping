@@ -37,3 +37,19 @@ export const EARN_REASON = "구매 적립";
 // 우편번호가 있으면 앞에 붙여 보여줍니다.
 export const fullAddress = (o: { postcode?: string | null; address: string; addressDetail?: string | null }) =>
   `${o.postcode ? `(${o.postcode}) ` : ""}${o.address}${o.addressDetail ? ` ${o.addressDetail}` : ""}`;
+
+// ---- 할인율: 상품의 sale 값("7%")을 정가(price)에서 자동으로 깎습니다.
+export function saleRate(sale?: string | null) {
+  const m = /^\s*(\d{1,2})\s*%?\s*$/.exec(sale ?? "");
+  const rate = m ? Number(m[1]) : 0;
+  return rate >= 1 && rate <= 99 ? rate : 0;
+}
+// 할인가: 10원 단위 아래는 버립니다. 주문·장바구니의 실제 가격도 이 값을 씁니다.
+export function unitPrice(p: { price: number; sale?: string | null }) {
+  const rate = saleRate(p.sale);
+  return rate ? Math.max(0, Math.floor((p.price * (100 - rate)) / 100 / 10) * 10) : p.price;
+}
+// 화면에 보여줄 정가(price)와 할인가(finalPrice, 할인 중일 때만)
+export function priceView(price: number, sale?: string | null): { price: string; finalPrice?: string } {
+  return saleRate(sale) ? { price: won(price), finalPrice: won(unitPrice({ price, sale })) } : { price: won(price) };
+}

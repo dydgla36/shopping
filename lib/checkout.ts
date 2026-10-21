@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CHECKOUT_ITEMS } from "@/lib/orders";
+import { CHECKOUT_ITEMS, unitPrice } from "@/lib/orders";
 
 export type Line = { name: string; price: number; quantity: number; color: string | null; size: string | null; bg: string; productId: number | null };
 export const SIZES = ["S", "M", "L"];
@@ -17,7 +17,7 @@ export async function resolveLines(p: { product?: string; size?: string; qty?: s
     if (!p.userId) return null;
     const items = await prisma.cartItem.findMany({ where: { userId: p.userId }, include: { product: true }, orderBy: { id: "asc" } });
     if (items.length === 0) return null;
-    return items.map((i) => ({ name: i.product.name, price: i.product.price, quantity: i.quantity, color: null, size: i.size, bg: i.product.bg, productId: i.productId }));
+    return items.map((i) => ({ name: i.product.name, price: unitPrice(i.product), quantity: i.quantity, color: null, size: i.size, bg: i.product.bg, productId: i.productId }));
   }
   if (!p.product) return samples;
   const id = Number(p.product);
@@ -26,5 +26,5 @@ export async function resolveLines(p: { product?: string; size?: string; qty?: s
   if (!product) return null;
   const quantity = Math.min(10, Math.max(1, Math.floor(Number(p.qty)) || 1));
   const size = p.size && SIZES.includes(p.size) ? p.size : null;
-  return [{ name: product.name, price: product.price, quantity, color: null, size, bg: product.bg, productId: product.id }];
+  return [{ name: product.name, price: unitPrice(product), quantity, color: null, size, bg: product.bg, productId: product.id }];
 }

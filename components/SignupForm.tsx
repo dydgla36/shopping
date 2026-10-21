@@ -1,5 +1,6 @@
 "use client";
 
+import PhoneInput from "@/components/PhoneInput";
 import { startTransition, useActionState, useState } from "react";
 import { signup } from "@/app/actions/auth";
 
@@ -41,7 +42,7 @@ export default function SignupForm() {
       </label>
       <label className="fld">
         휴대전화
-        <input name="phone" type="tel" placeholder="010-0000-0000" autoComplete="tel" required />
+        <PhoneInput name="phone" required />
       </label>
       <div style={{ marginTop: 32, padding: 20, background: "#f4f2ee" }}>
         <label style={{ ...row, fontWeight: 700 }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import PhoneInput from "@/components/PhoneInput";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { createOrder } from "@/app/actions/order";
 import { couponDiscount, couponText, couponUsable } from "@/lib/coupons";
@@ -107,12 +108,12 @@ export default function CheckoutForm({ items, itemsTotal, shipping, balance, cou
         )}
         <div style={sec}>주문자 정보</div>
         <label className="fld">이름<input name="ordererName" type="text" defaultValue={defaults.name} placeholder="이름을 입력하세요" required /></label>
-        <label className="fld">휴대전화<input name="ordererPhone" type="tel" defaultValue={defaults.phone} placeholder="010-0000-0000" required /></label>
+        <label className="fld">휴대전화<PhoneInput name="ordererPhone" defaultValue={defaults.phone} required /></label>
         <label className="fld">이메일<input name="ordererEmail" type="email" defaultValue={defaults.email} placeholder="example@email.com" required /></label>
 
         <div style={sec}>배송 정보</div>
         <label className="fld">수령인<input name="recipientName" type="text" placeholder="수령인 이름" required /></label>
-        <label className="fld">연락처<input name="recipientPhone" type="tel" placeholder="010-0000-0000" required /></label>
+        <label className="fld">연락처<PhoneInput name="recipientPhone" required /></label>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
           <label className="fld" style={{ flex: 1 }}>우편번호<input name="postcode" type="text" value={postcode} readOnly placeholder="주소 검색을 눌러 주세요" /></label>
           <button type="button" onClick={() => { setSearchError(""); setSearching(true); }} style={{ padding: "15px 18px", border: "1px solid #111", background: "#fff", color: "#111", font: "700 12px Archivo,sans-serif", letterSpacing: ".08em", cursor: "pointer", flex: "none" }}>주소 검색</button>

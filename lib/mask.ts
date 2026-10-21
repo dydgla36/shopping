@@ -11,3 +11,14 @@ export function maskLoginId(id: string) {
   const keep = Math.min(2, Math.max(1, id.length - 2));
   return id.slice(0, keep) + "*".repeat(Math.max(2, id.length - keep));
 }
+
+// 전화번호 가운데를 가립니다. 010-1234-5678 → 010-****-5678
+export function maskPhone(phone: string) {
+  const d = phone.replace(/\D/g, "");
+  return d.length >= 7 ? `${d.slice(0, 3)}-****-${d.slice(-4)}` : "****";
+}
+
+// 주소는 앞의 두 단어(시·구)만 보여줍니다. 서울 강남구 테헤란로 1 → 서울 강남구 ***
+export function maskAddress(address: string) {
+  return `${address.trim().split(/\s+/).slice(0, 2).join(" ")} ***`;
+}

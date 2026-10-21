@@ -5,7 +5,7 @@ import { logout } from "@/app/actions/auth";
 
 const nav = [
   ["BEST", "/list/best"],
-  ["NEW 7%", "/list/new"],
+  ["NEW", "/list/new"],
   ["WOMEN", "/list/women"],
   ["ABOUT", "/about"],
 ];

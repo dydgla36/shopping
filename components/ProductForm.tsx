@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { createProduct, updateProduct } from "@/app/actions/admin";
 import ProductCard from "@/components/ProductCard";
-import { won } from "@/lib/orders";
+import { priceView, unitPrice, won } from "@/lib/orders";
 import { btnDark, input, notice } from "@/app/admin/styles";
 
 const COLORS = ["#e6e3de", "#ddd8d0", "#d6d6d6", "#dcdcdc", "#e8dcd2", "#d9e0e3"];
@@ -49,7 +49,7 @@ export default function ProductForm({ categories, product }: { categories: strin
     category: product && categories.includes(product.category) ? product.category : categories[0] ?? "",
     name: product?.name ?? "",
     price: product ? String(product.price) : "",
-    sale: product?.sale ?? "",
+    sale: (product?.sale ?? "").replace("%", ""),
     position: product ? String(product.position) : "",
     bg: product?.bg ?? COLORS[0],
     imageUrl: product?.imageUrl ?? "",
@@ -136,11 +136,12 @@ export default function ProductForm({ categories, product }: { categories: strin
         <label style={label}>상품 이름
           <input name="name" value={v.name} onChange={set("name")} required style={{ ...input, marginTop: 6 }} />
         </label>
-        <label style={label}>가격 (원, 숫자만)
+        <label style={label}>정가 (원, 숫자만)
           <input name="price" type="number" min={0} value={v.price} onChange={set("price")} required style={{ ...input, marginTop: 6 }} />
         </label>
-        <label style={label}>할인 표시 (선택, 예: 7%)
-          <input name="sale" value={v.sale} onChange={set("sale")} style={{ ...input, marginTop: 6 }} />
+        <label style={label}>할인율 (선택, 1~99 사이 숫자 — 입력하면 정가에서 자동으로 깎여요)
+          <input name="sale" type="number" min={1} max={99} value={v.sale} onChange={set("sale")} placeholder="예: 7" style={{ ...input, marginTop: 6 }} />
+          {v.sale && v.price && <span style={{ display: "block", marginTop: 6, color: "#c0392b" }}>할인가 {won(unitPrice({ price: Number(v.price) || 0, sale: `${v.sale}%` }))} (정가 {won(Number(v.price) || 0)})</span>}
         </label>
         <label style={label}>순서 (선택{product ? "" : ", 비우면 맨 뒤"})
           <input name="position" type="number" value={v.position} onChange={set("position")} style={{ ...input, marginTop: 6 }} />
@@ -190,7 +191,7 @@ export default function ProductForm({ categories, product }: { categories: strin
       <div style={{ width: 240, flex: "none" }}>
         <div style={{ fontSize: 12, color: "#767676", marginBottom: 12 }}>미리보기</div>
         <div style={{ pointerEvents: "none" }}>
-          <ProductCard name={v.name || "상품 이름"} price={won(Number(v.price) || 0)} bg={v.bg} sale={v.sale || undefined} imageUrl={imageOk && check.state === "ok" ? v.imageUrl : undefined} />
+          <ProductCard name={v.name || "상품 이름"} {...priceView(Number(v.price) || 0, v.sale ? `${v.sale}%` : null)} bg={v.bg} sale={v.sale ? `${v.sale}%` : undefined} imageUrl={imageOk && check.state === "ok" ? v.imageUrl : undefined} />
         </div>
         <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.6, color: check.state === "ok" ? "#2d6a2d" : check.state === "error" ? "#c0392b" : "#767676" }} role="status">
           {v.imageUrl && !imageOk && "이미지 주소는 http:// 또는 https://로 시작해야 해요."}

@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-type Props = { id?: number; name: string; price: string; bg?: string; sale?: string; imageUrl?: string; soldOut?: boolean };
+type Props = { id?: number; name: string; price: string; finalPrice?: string; bg?: string; sale?: string; imageUrl?: string; soldOut?: boolean };
 
-export default function ProductCard({ id, name, price, bg = "#e6e3de", sale, imageUrl, soldOut }: Props) {
+export default function ProductCard({ id, name, price, finalPrice, bg = "#e6e3de", sale, imageUrl, soldOut }: Props) {
   return (
     <Link className="card" href={id ? `/product/${id}` : "/product"}>
       <div className="ph" style={{ background: bg, position: "relative", overflow: "hidden" }}>
@@ -18,8 +18,18 @@ export default function ProductCard({ id, name, price, bg = "#e6e3de", sale, ima
       <b>[브랜드명]</b>
       <span>{name}</span>
       <i>
-        {sale && <em style={{ color: "#c0392b" }}>{sale}</em>}
-        {price}
+        {sale && finalPrice ? (
+          <>
+            <s style={{ marginRight: 8, color: "#767676", fontWeight: 400 }}>{price}</s>
+            <em style={{ color: "#c0392b" }}>{sale}</em>
+            {finalPrice}
+          </>
+        ) : (
+          <>
+            {sale && <em style={{ color: "#c0392b" }}>{sale}</em>}
+            {price}
+          </>
+        )}
       </i>
     </Link>
   );
