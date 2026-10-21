@@ -79,10 +79,16 @@ export default async function Page() {
               {orders.map((o) => (
                 <div key={o.id} style={{ display: "grid", gridTemplateColumns: cols, gap: 12, padding: "18px 12px", borderBottom: "1px solid #e5e5e5", fontSize: 14, alignItems: "center" }}>
                   <span style={{ color: "#767676" }}>{fmtDate(o.createdAt)}</span>
-                  <Link href={`/order-detail?no=${o.orderNumber}`}>
-                    {o.items[0]?.name ?? "-"}
-                    {o.items.length > 1 ? ` 외 ${o.items.length - 1}건` : ""}
-                  </Link>
+                  <div>
+                    <Link href={`/order-detail?no=${o.orderNumber}`}>
+                      {o.items[0]?.name ?? "-"}
+                      {o.items.length > 1 ? ` 외 ${o.items.length - 1}건` : ""}
+                    </Link>
+                    {(o.carrier || o.trackingNumber) && (
+                      <div style={{ marginTop: 4, fontSize: 12, color: "#555" }}>택배 {o.carrier ?? ""} {o.trackingNumber ?? ""}</div>
+                    )}
+                    {o.adminMemo && <div style={{ marginTop: 4, fontSize: 12, color: "#2d6a2d" }}>판매자 안내가 있어요</div>}
+                  </div>
                   <span style={{ fontFamily: "Archivo,sans-serif" }}>{won(o.total)}</span>
                   <span style={{ fontWeight: 700 }}>{STATUS_LABEL[o.status] ?? o.status}</span>
                 </div>

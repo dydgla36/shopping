@@ -105,13 +105,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             <button type="button" disabled className="btn" style={{ width: "100%", marginTop: 32, background: "#ccc", color: "#fff", border: 0 }}>SOLD OUT</button>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 32 }}>
-              <button type="submit" className="btn" style={{ background: "#fff", border: "1px solid #111", cursor: "pointer" }}>ADD TO CART</button>
+              <button type="submit" className="btn" style={{ background: "#fff", color: "#111", border: "1px solid #111", cursor: "pointer" }}>ADD TO CART</button>
               <button type="submit" formAction={buyNow} className="btn" style={{ background: "#111", color: "#fff", border: 0, cursor: "pointer" }}>BUY NOW</button>
             </div>
           )}
-          <button type="submit" formAction={toggleWishlist} formNoValidate aria-pressed={!!wished} className="btn" style={{ width: "100%", marginTop: 10, background: "#fff", border: "1px solid #ccc", cursor: "pointer" }}>
+          <button type="submit" formAction={toggleWishlist} formNoValidate aria-pressed={!!wished} className="btn" style={{ width: "100%", marginTop: 10, background: "#fff", color: "#111", border: "1px solid #ccc", cursor: "pointer" }}>
             {wished ? "♥ WISHLIST" : "♡ WISHLIST"}
           </button>
+          {!user && <p style={{ margin: "10px 0 0", fontSize: 12, lineHeight: 1.7, color: "#767676" }}>비회원도 BUY NOW로 바로 주문할 수 있어요. 장바구니와 관심 상품은 로그인이 필요해요.</p>}
           <div style={{ marginTop: 36, fontSize: 13, lineHeight: 1.9, color: "#555", borderTop: "1px solid #e5e5e5", paddingTop: 20 }}>
             <b style={{ color: "#111" }}>배송 안내</b> [배송비·배송 기간 안내]<br />
             <b style={{ color: "#111" }}>교환·반품</b> [교환·반품 정책 안내]

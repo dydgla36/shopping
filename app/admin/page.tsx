@@ -11,7 +11,9 @@ export default async function Page() {
   kst.setUTCHours(0, 0, 0, 0);
   const todayStart = new Date(kst.getTime() - 9 * 3600 * 1000);
 
-  const [today, total, sum, waiting, members, recent, lowStock, openQna, openClaims] = await Promise.all([
+  let loaded;
+  try {
+    loaded = await Promise.all([
     prisma.order.count({ where: { createdAt: { gte: todayStart } } }),
     prisma.order.count(),
     prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: "CANCELED" } } }),
@@ -23,6 +25,20 @@ export default async function Page() {
     prisma.question.count({ where: { answer: null } }).catch(() => 0),
     prisma.claim.count({ where: { status: { in: ["RECEIVED", "PROCESSING"] } } }).catch(() => 0),
   ]);
+  } catch (e) {
+    // 새 기능에 필요한 컬럼·테이블이 아직 DB에 없을 때: 대시보드가 멈추지 않고 DB 설정 안내를 보여줍니다.
+    console.error("대시보드 조회 실패:", e);
+    return (
+      <>
+        <h2 style={h2}>대시보드</h2>
+        <div role="alert" style={{ marginTop: 20, padding: "16px 20px", background: "#fbeeee", color: "#c0392b", fontSize: 14, lineHeight: 1.8 }}>
+          DB에 새 기능에 필요한 테이블이나 컬럼이 아직 없는 것 같아요.{" "}
+          <Link href="/admin/setup" style={{ borderBottom: "1px solid #c0392b" }}>관리자 &gt; DB 설정</Link>에서 <b>테이블 만들기</b>를 한 번 눌러 주세요.
+        </div>
+      </>
+    );
+  }
+  const [today, total, sum, waiting, members, recent, lowStock, openQna, openClaims] = loaded;
   const cols = "100px 150px 1fr 110px 90px";
 
   return (

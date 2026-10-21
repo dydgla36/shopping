@@ -1,3 +1,5 @@
+:root{color-scheme:light}
+button,input,select,textarea{color:#111}
 body{margin:0}
 a{color:#111;text-decoration:none}a:hover{color:#6b6b6b}
 .nav a{font:700 13px/1 Archivo,sans-serif;letter-spacing:.06em}

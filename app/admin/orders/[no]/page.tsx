@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { updateOrder } from "@/app/actions/admin";
-import { STATUS_LABEL, fmtDate, itemOption, won } from "@/lib/orders";
+import { STATUS_LABEL, fmtDate, fullAddress, itemOption, won } from "@/lib/orders";
+import { emailConfigured } from "@/lib/email";
 import { btnDark, h2, input, notice } from "../../styles";
 
 const line = { display: "flex", justifyContent: "space-between", gap: 20, padding: "14px 0", borderBottom: "1px solid #e5e5e5", fontSize: 14 } as const;
@@ -32,6 +33,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       {sp.error && <div style={notice(false)} role="alert">{sp.error}</div>}
 
       <Title>배송 처리</Title>
+      <p style={{ margin: "12px 0 0", fontSize: 12, color: emailConfigured() ? "#2d6a2d" : "#767676" }}>이메일 알림: {emailConfigured() ? "켜짐 — 상태를 발송 중·배송 완료·취소로 바꾸면 고객에게 메일이 가요." : "꺼짐 (이메일 서비스가 설정되지 않았어요)"}</p>
       <form action={updateOrder} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginTop: 18, alignItems: "end" }}>
         <input type="hidden" name="orderNumber" value={order.orderNumber} />
         <label style={{ fontSize: 12, color: "#767676" }}>주문 상태
@@ -45,13 +47,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <label style={{ fontSize: 12, color: "#767676" }}>운송장 번호
           <input name="trackingNumber" defaultValue={order.trackingNumber ?? ""} placeholder="운송장 번호" style={{ ...input, marginTop: 6 }} />
         </label>
+        <label style={{ fontSize: 12, color: "#767676", gridColumn: "1 / -1" }}>고객에게 보이는 메모 (선택) — 고객의 주문 상세에 &quot;판매자 안내&quot;로 표시돼요
+          <textarea name="adminMemo" defaultValue={order.adminMemo ?? ""} rows={3} maxLength={500} placeholder="예: 재입고 상품이라 배송이 하루 늦어져요" style={{ ...input, marginTop: 6, resize: "vertical" }} />
+        </label>
         <button type="submit" style={btnDark}>SAVE</button>
       </form>
 
       <Title>배송 정보</Title>
       <Row a="수령인" b={order.recipientName} />
       <Row a="연락처" b={order.recipientPhone} />
-      <Row a="주소" b={`${order.address}${order.addressDetail ? ` ${order.addressDetail}` : ""}`} />
+      <Row a="주소" b={fullAddress(order)} />
       <Row a="배송 메모" b={order.deliveryMemo ?? "-"} />
 
       <Title>주문 상품</Title>
@@ -66,7 +71,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       ))}
 
       <Title>주문자 · 결제 정보</Title>
-      <Row a="주문자" b={`${order.ordererName} (${order.user.loginId})`} />
+      <Row a="주문자" b={`${order.ordererName} (${order.user ? order.user.loginId : "비회원"})`} />
       <Row a="연락처" b={order.ordererPhone} />
       <Row a="이메일" b={order.ordererEmail} />
       <Row a="결제 수단" b={order.paymentMethod} />

@@ -46,7 +46,7 @@ export default function ProductForm({ categories, product }: { categories: strin
   const [state, action, pending] = useActionState(product ? updateProduct : createProduct, undefined);
   // 입력값을 상태로 들고 있어서, 오류가 나도 입력한 내용이 지워지지 않고 미리보기에도 바로 반영됩니다.
   const [v, setV] = useState({
-    category: product?.category ?? categories[0] ?? "",
+    category: product && categories.includes(product.category) ? product.category : categories[0] ?? "",
     name: product?.name ?? "",
     price: product ? String(product.price) : "",
     sale: product?.sale ?? "",

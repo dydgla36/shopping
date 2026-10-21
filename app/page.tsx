@@ -22,17 +22,13 @@ export default function Page() {
             매주 업데이트되는 브랜드 아카이브. 지금 가장 많이 선택되는 아이템을 만나보세요.
           </p>
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <Link href="/list/new" style={{ background: "#111", color: "#fff", padding: "16px 28px", font: "700 13px Archivo,sans-serif", letterSpacing: ".08em" }}>
+            <Link href="/list/women" style={{ background: "#111", color: "#fff", padding: "16px 28px", font: "700 13px Archivo,sans-serif", letterSpacing: ".08em" }}>
               WOMEN'S NEW
-            </Link>
-            <Link href="/list/new" style={{ border: "1px solid #111", padding: "15px 28px", font: "700 13px Archivo,sans-serif", letterSpacing: ".08em" }}>
-              MEN'S NEW
             </Link>
           </div>
         </div>
       </section>
       <HomeRow title="WOMEN'S NEW" href="/list/women" slug="women" />
-      <HomeRow title="MEN'S NEW" href="/list/men" slug="men" />
       <HomeRow title="WOMEN BEST" href="/list/best" slug="best" />
     </>
   );

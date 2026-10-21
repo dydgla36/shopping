@@ -8,6 +8,7 @@ import { emailConfigured, sendEmail } from "@/lib/email";
 import { maskLoginId } from "@/lib/mask";
 import { emailOk, passwordProblem, phoneOk } from "@/lib/validate";
 import { isDuplicate } from "@/lib/errors";
+import { clientIp, hit } from "@/lib/rateLimit";
 import type { ActionState } from "@/components/ActionForm";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -50,6 +51,7 @@ export async function findId(_prev: ActionState, formData: FormData): Promise<Ac
   const name = str(formData, "name");
   const email = str(formData, "email").toLowerCase();
   if (!name || !emailOk(email)) return { error: "이름과 이메일을 정확히 입력해 주세요." };
+  if (!(await hit(`find-id:${await clientIp()}`, 10, 10 * 60 * 1000))) return { error: "요청이 너무 많아요. 10분 뒤에 다시 시도해 주세요." };
   const user = await prisma.user.findFirst({ where: { name, email, role: "USER" }, select: { loginId: true } });
   if (!user) return { error: "일치하는 회원 정보가 없어요." };
   return { ok: `가입하신 아이디는 ${maskLoginId(user.loginId)} 입니다. (개인정보 보호를 위해 일부를 가렸어요)` };
@@ -60,6 +62,8 @@ export async function requestReset(_prev: ActionState, formData: FormData): Prom
   const loginId = str(formData, "loginId");
   const email = str(formData, "email").toLowerCase();
   if (!loginId || !emailOk(email)) return { error: "아이디와 이메일을 정확히 입력해 주세요." };
+  // 같은 접속지에서 1시간에 5번, 같은 이메일로는 1시간에 3번까지만 요청할 수 있습니다. (메일 폭탄 방지)
+  if (!(await hit(`reset:ip:${await clientIp()}`, 5, 60 * 60 * 1000)) || !(await hit(`reset:email:${email}`, 3, 60 * 60 * 1000))) return { error: "요청이 너무 많아요. 1시간 뒤에 다시 시도해 주세요." };
   if (!emailConfigured()) return { error: "이메일 발송 서비스가 아직 연결되지 않아 메일을 보낼 수 없어요. 관리자에게 문의해 주세요." };
 
   const generic: ActionState = { ok: "입력하신 정보가 맞다면 비밀번호 재설정 메일을 보냈어요. 메일함(스팸함 포함)을 확인해 주세요. 링크는 1시간 동안 유효해요." };

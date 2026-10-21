@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import ActionForm from "@/components/ActionForm";
 import { createClaim } from "@/app/actions/claims";
-import { CLAIM_STATUS, CLAIM_TYPE, STATUS_LABEL, fmtDate, itemOption, won } from "@/lib/orders";
+import { CLAIM_STATUS, CLAIM_TYPE, STATUS_LABEL, fmtDate, fullAddress, itemOption, won } from "@/lib/orders";
 
 export const metadata = { title: "주문 상세" };
 
@@ -39,6 +39,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           <div><div style={{ fontSize: 12, color: "#767676" }}>주문 상태</div><div style={{ marginTop: 6, fontWeight: 700, fontSize: 18 }}>{STATUS_LABEL[order.status] ?? order.status}</div></div>
         </div>
 
+        {(order.carrier || order.trackingNumber) && (
+          <div style={{ marginTop: 20, padding: "16px 20px", border: "1px solid #111", fontSize: 14, lineHeight: 1.8 }}>
+            <b style={{ marginRight: 12 }}>배송 조회</b>
+            택배사 <b>{order.carrier ?? "-"}</b> · 운송장 번호 <b style={{ fontFamily: "Archivo,sans-serif" }}>{order.trackingNumber ?? "-"}</b>
+          </div>
+        )}
+        {order.adminMemo && (
+          <div style={{ marginTop: 12, padding: "16px 20px", background: "#f4f2ee", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-line" }}>
+            <b style={{ display: "block", marginBottom: 6 }}>판매자 안내</b>
+            {order.adminMemo}
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 56, marginTop: 8, alignItems: "start" }}>
           <div>
             <div style={{ marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", ...head }}>주문 상품</div>
@@ -57,7 +69,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             <div style={{ marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", ...head }}>배송 정보</div>
             <Row a="수령인" b={order.recipientName} />
             <Row a="연락처" b={order.recipientPhone} />
-            <Row a="주소" b={`${order.address}${order.addressDetail ? ` ${order.addressDetail}` : ""}`} />
+            <Row a="주소" b={fullAddress(order)} />
             <Row a="배송 메모" b={order.deliveryMemo ?? "-"} />
           </div>
           <div>

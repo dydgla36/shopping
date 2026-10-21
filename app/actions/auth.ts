@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { clearLimit, clientIp, lockedSeconds, recordFailure } from "@/lib/rateLimit";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
 
 export type FormState = { error?: string } | undefined;
@@ -64,12 +65,24 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
   const next = safeNext(str(formData, "next"));
   if (!loginId || !password) return { error: "아이디와 비밀번호를 입력해 주세요." };
 
+  // 로그인 시도 횟수 제한: 같은 아이디로 5번, 같은 접속지에서 20번 틀리면 15분 동안 막습니다.
+  const WINDOW = 15 * 60 * 1000;
+  const idKey = `login:id:${loginId.toLowerCase()}`;
+  const ipKey = `login:ip:${await clientIp()}`;
+  const wait = Math.max(await lockedSeconds(idKey), await lockedSeconds(ipKey));
+  if (wait > 0) return { error: `로그인 시도가 너무 많아요. ${Math.ceil(wait / 60)}분 뒤에 다시 시도해 주세요.` };
+
   let isAdmin = false;
   try {
     const user = await prisma.user.findUnique({ where: { loginId } });
     // 아이디가 없어도 같은 시간이 걸리도록 해시 계산을 한 번 합니다.
     const ok = user ? verifyPassword(password, user.passwordHash) : (hashPassword(password), false);
-    if (!user || !ok) return { error: "아이디 또는 비밀번호가 올바르지 않아요." };
+    if (!user || !ok) {
+      await recordFailure(idKey, 5, WINDOW, WINDOW);
+      await recordFailure(ipKey, 20, WINDOW, WINDOW);
+      return { error: "아이디 또는 비밀번호가 올바르지 않아요." };
+    }
+    await clearLimit(idKey);
     isAdmin = user.role === "ADMIN";
     // 관리자 로그인은 항상 1일만 유지합니다.
     await createSession(user.id, isAdmin ? 1 : remember ? 30 : 1);

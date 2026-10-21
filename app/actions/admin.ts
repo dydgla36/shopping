@@ -8,6 +8,7 @@ import { SIZES } from "@/lib/checkout";
 import { STATUS_LABEL } from "@/lib/orders";
 import { lists } from "@/lib/lists";
 import { cancelOrderTx, earnPointsTx } from "@/lib/orderOps";
+import { notifyOrder } from "@/lib/notify";
 
 // 서버 액션은 누구나 직접 호출할 수 있는 주소이므로, 모든 동작의 맨 처음에 관리자인지 확인합니다.
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -29,11 +30,26 @@ export async function updateOrder(formData: FormData) {
     if (status === "CANCELED" && order!.status !== "CANCELED") await cancelOrderTx(tx, order!.id);
     await tx.order.update({
       where: { orderNumber: no },
-      data: { status, carrier: str(formData, "carrier") || null, trackingNumber: str(formData, "trackingNumber") || null },
+      data: {
+        status,
+        carrier: str(formData, "carrier").slice(0, 30) || null,
+        trackingNumber: str(formData, "trackingNumber").slice(0, 50) || null,
+        adminMemo: str(formData, "adminMemo").slice(0, 500) || null, // 고객이 주문 상세에서 볼 수 있는 메모
+      },
     });
     // 배송 완료: 적립금 지급
     if (status === "DELIVERED" && order!.status !== "DELIVERED") await earnPointsTx(tx, order!);
   });
+  // 고객에게 이메일 알림 (이메일 서비스가 설정되어 있을 때만): 발송 시작, 배송 완료, 취소
+  const carrier = str(formData, "carrier").slice(0, 30) || null;
+  const trackingNumber = str(formData, "trackingNumber").slice(0, 50) || null;
+  const o = order!;
+  const kind =
+    status === "CANCELED" && o.status !== "CANCELED" ? "canceled"
+    : status === "DELIVERED" && o.status !== "DELIVERED" ? "delivered"
+    : status === "SHIPPING" && (o.status !== "SHIPPING" || (trackingNumber && trackingNumber !== o.trackingNumber)) ? "shipping"
+    : null;
+  if (kind) await notifyOrder(kind, { ...o, carrier, trackingNumber });
   redirect(`${to}?saved=1`);
 }
 
@@ -178,6 +194,18 @@ export async function deleteProduct(formData: FormData) {
     await prisma.product.deleteMany({ where: { id } });
     const imageId = internalId(product?.imageUrl);
     if (imageId) await prisma.productImage.deleteMany({ where: { id: imageId } });
+  }
+  back();
+}
+
+// 없어진 카테고리(예: men)에 남아 있는 상품을 한꺼번에 삭제합니다.
+export async function deleteRemovedCategoryProducts() {
+  await requireAdmin();
+  const gone = await prisma.product.findMany({ where: { category: { notIn: Object.keys(lists) } }, select: { id: true, imageUrl: true } });
+  if (gone.length > 0) {
+    await prisma.product.deleteMany({ where: { id: { in: gone.map((p) => p.id) } } });
+    const imageIds = gone.map((p) => internalId(p.imageUrl)).filter((x): x is string => Boolean(x));
+    if (imageIds.length > 0) await prisma.productImage.deleteMany({ where: { id: { in: imageIds } } });
   }
   back();
 }

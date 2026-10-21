@@ -10,7 +10,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
       <h1 style={{ margin: 0, textAlign: "center", font: "800 30px Archivo,sans-serif", letterSpacing: ".06em" }}>LOGIN</h1>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", marginTop: 32, borderBottom: "1px solid #e5e5e5", textAlign: "center", font: "700 13px 'Noto Sans KR',sans-serif" }}>
         <span style={{ padding: 14, borderBottom: "2px solid #111" }}>로그인</span>
-        <a href="#" style={{ padding: 14, color: "#767676" }}>비회원 주문조회</a>
+        <Link href="/order-lookup" style={{ padding: 14, color: "#767676" }}>비회원 주문조회</Link>
       </div>
       {next && (
         <p style={{ margin: "20px 0 0", padding: "14px 16px", background: "#f4f2ee", fontSize: 13, color: "#555" }}>

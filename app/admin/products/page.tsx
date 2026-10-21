@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
-import { deleteProduct } from "@/app/actions/admin";
+import { deleteProduct, deleteRemovedCategoryProducts } from "@/app/actions/admin";
+import { lists } from "@/lib/lists";
 import { won } from "@/lib/orders";
 import { LOW_STOCK, groupStock } from "@/lib/stock";
 import { SIZES } from "@/lib/checkout";
@@ -13,6 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   await requireAdmin("/admin/products");
   const sp = await searchParams;
   const products = await prisma.product.findMany({ orderBy: [{ category: "asc" }, { position: "asc" }], take: 200 });
+  const removed = products.filter((p) => !lists[p.category]);
   const stocks = groupStock(await prisma.productStock.findMany({ where: { productId: { in: products.map((p) => p.id) } } }).catch(() => []));
 
   return (
@@ -22,6 +24,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
         <Link href="/admin/products/new" style={{ ...btnDark, display: "inline-block" }}>+ 상품 추가</Link>
       </div>
       <p style={{ margin: "8px 0 0", fontSize: 13, color: "#767676" }}>여기서 바꾼 내용은 카테고리 목록과 상품 상세 페이지에 바로 반영돼요. 상품이 하나도 없으면 목록 화면은 샘플 상품을 대신 보여줘요.</p>
+      {removed.length > 0 && (
+        <div role="alert" style={{ marginTop: 16, padding: "14px 16px", background: "#fbeeee", color: "#c0392b", fontSize: 13, lineHeight: 1.8 }}>
+          없어진 카테고리({Array.from(new Set(removed.map((p) => p.category))).join(", ")})에 상품 {removed.length}개가 남아 있어요. 이 상품들은 사이트 어디에도 보이지 않아요.
+          <form action={deleteRemovedCategoryProducts} style={{ marginTop: 10 }}>
+            <button type="submit" style={{ ...btnLine, color: "#c0392b", borderColor: "#c0392b" }}>이 상품 {removed.length}개 모두 삭제</button>
+          </form>
+        </div>
+      )}
       {sp.saved && <div style={notice(true)} role="status">저장했어요.</div>}
       {sp.error && <div style={notice(false)} role="alert">{sp.error}</div>}
 
