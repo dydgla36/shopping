@@ -19,6 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   // 담은 뒤 재고가 줄었거나 품절이 된 상품을 찾습니다. (재고 테이블이 없으면 확인하지 않음)
   const stocks = groupStock(await prisma.productStock.findMany({ where: { productId: { in: items.map((i) => i.productId) } } }).catch(() => []));
   const problem = (i: (typeof items)[number]) => {
+    if (i.product.soldOut) return "품절이에요. 삭제해 주세요.";
     const left = stocks.get(i.productId)?.[i.size];
     if (left === undefined || i.quantity <= left) return null;
     return left === 0 ? "품절이에요. 삭제해 주세요." : `재고가 ${left}개 남았어요. 수량을 줄여 주세요.`;

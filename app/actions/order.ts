@@ -61,7 +61,10 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
     total = await prisma.$transaction(async (tx) => {
       // 1) 재고 확인과 차감 (재고를 관리하는 사이즈만)
       for (const l of lines) {
-        if (!l.productId || !l.size) continue;
+        if (!l.productId) continue;
+        const prod = await tx.product.findUnique({ where: { id: l.productId }, select: { soldOut: true } });
+        if (prod?.soldOut) throw new CheckoutError(`'${l.name}' 상품은 품절이에요.`);
+        if (!l.size) continue;
         const stock = await tx.productStock.findUnique({ where: { productId_size: { productId: l.productId, size: l.size } } });
         if (!stock) continue; // 재고를 따로 관리하지 않는 상품(무제한)
         const done = await tx.productStock.updateMany({ where: { id: stock.id, quantity: { gte: l.quantity } }, data: { quantity: { decrement: l.quantity } } });

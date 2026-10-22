@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin";
 import { SIZES } from "@/lib/checkout";
 import { STATUS_LABEL } from "@/lib/orders";
 import { lists } from "@/lib/lists";
+import { SUB_CATEGORIES } from "@/lib/categories";
 import { cancelOrderTx, earnPointsTx } from "@/lib/orderOps";
 import { notifyOrder } from "@/lib/notify";
 
@@ -94,6 +95,10 @@ function readProduct(formData: FormData) {
     bg: cleanColor(str(formData, "bg")),
     image: cleanImage(str(formData, "imageUrl")),
     description: str(formData, "description").slice(0, 2000) || null,
+    subCategory: SUB_CATEGORIES.includes(str(formData, "subCategory")) ? str(formData, "subCategory") : null,
+    inBest: formData.get("inBest") === "on", // BEST 카테고리에도 표시
+    inNew: formData.get("inNew") === "on", // NEW 카테고리에도 표시
+    soldOut: formData.get("soldOut") === "on", // 품절 표시
   };
 }
 
@@ -148,6 +153,10 @@ export async function createProduct(_prev: ProductState, formData: FormData): Pr
         position,
         imageUrl: d.image as string | null,
         description: d.description,
+        subCategory: d.subCategory,
+        inBest: d.inBest,
+        inNew: d.inNew,
+        soldOut: d.soldOut,
         stocks: { create: SIZES.filter((s) => st.stock[s] !== null).map((s) => ({ size: s, quantity: st.stock[s] as number })) },
       },
     });
@@ -175,7 +184,7 @@ export async function updateProduct(_prev: ProductState, formData: FormData): Pr
       oldImage = (await tx.product.findUnique({ where: { id }, select: { imageUrl: true } }))?.imageUrl;
       await tx.product.update({
         where: { id },
-        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale as string | null, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description },
+        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale as string | null, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description, subCategory: d.subCategory, inBest: d.inBest, inNew: d.inNew, soldOut: d.soldOut },
       });
       for (const size of SIZES) {
         const quantity = st.stock[size];
@@ -215,6 +224,17 @@ export async function deleteRemovedCategoryProducts() {
     await prisma.product.deleteMany({ where: { id: { in: gone.map((p) => p.id) } } });
     const imageIds = gone.map((p) => internalId(p.imageUrl)).filter((x): x is string => Boolean(x));
     if (imageIds.length > 0) await prisma.productImage.deleteMany({ where: { id: { in: imageIds } } });
+  }
+  back();
+}
+
+// 품절 처리 / 품절 해제 (재고 숫자와 상관없이 상품 전체를 품절로 표시합니다)
+export async function toggleSoldOut(formData: FormData) {
+  await requireAdmin();
+  const id = Number(str(formData, "id"));
+  if (Number.isInteger(id)) {
+    const product = await prisma.product.findUnique({ where: { id }, select: { soldOut: true } });
+    if (product) await prisma.product.update({ where: { id }, data: { soldOut: !product.soldOut } });
   }
   back();
 }

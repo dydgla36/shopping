@@ -31,7 +31,7 @@ export default async function Page() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "40px 20px", marginTop: 32 }}>
             {items.map((i) => (
               <div key={i.id}>
-                <ProductCard id={i.productId} name={i.product.name} {...priceView(i.product.price, i.product.sale)} bg={i.product.bg} sale={i.product.sale ?? undefined} imageUrl={i.product.imageUrl ?? undefined} soldOut={soldOutOf(stocks.get(i.productId) ?? {})} />
+                <ProductCard id={i.productId} name={i.product.name} {...priceView(i.product.price, i.product.sale)} bg={i.product.bg} sale={i.product.sale ?? undefined} imageUrl={i.product.imageUrl ?? undefined} soldOut={i.product.soldOut || soldOutOf(stocks.get(i.productId) ?? {})} />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, marginTop: 12 }}>
                   <Link href={`/product/${i.productId}`} style={{ textAlign: "center", padding: 12, border: "1px solid #111", font: "700 12px Archivo,sans-serif", letterSpacing: ".08em" }}>OPTION &amp; CART</Link>
                   <form action={removeFromWishlist}>

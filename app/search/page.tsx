@@ -35,7 +35,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "40px 20px", marginTop: 32 }}>
                 {products.map((p) => (
-                  <ProductCard key={p.id} id={p.id} name={p.name} {...priceView(p.price, p.sale)} bg={p.bg} sale={p.sale ?? undefined} imageUrl={p.imageUrl ?? undefined} soldOut={soldOutOf(stocks.get(p.id) ?? {})} />
+                  <ProductCard key={p.id} id={p.id} name={p.name} {...priceView(p.price, p.sale)} bg={p.bg} sale={p.sale ?? undefined} imageUrl={p.imageUrl ?? undefined} soldOut={p.soldOut || soldOutOf(stocks.get(p.id) ?? {})} />
                 ))}
               </div>
             )}

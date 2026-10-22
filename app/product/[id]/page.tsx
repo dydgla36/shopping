@@ -50,7 +50,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     prisma.review.findMany({ where: { productId: product.id }, orderBy: { createdAt: "desc" }, take: 5, include: { user: { select: { name: true } } } }).catch(() => []),
     prisma.review.aggregate({ where: { productId: product.id }, _avg: { rating: true }, _count: { _all: true } }).catch(() => null),
   ]);
-  const soldOut = soldOutOf(stock);
+  const soldOut = product.soldOut || soldOutOf(stock);
   const pv = priceView(product.price, product.sale);
   const firstAvailable = ["M", ...SIZES].find((s) => stock[s] !== 0) ?? "M"; // 품절이 아닌 사이즈를 기본 선택
 
@@ -98,7 +98,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               const text = q === 0 ? `${s} (품절)` : q !== undefined && q <= LOW_STOCK ? `${s} (${q}개 남음)` : s;
               return (
                 <span key={s}>
-                  <input className="opt" type="radio" name="size" id={`size-${s}`} value={s} defaultChecked={s === firstAvailable} disabled={q === 0} />
+                  <input className="opt" type="radio" name="size" id={`size-${s}`} value={s} defaultChecked={s === firstAvailable} disabled={q === 0 || product.soldOut} />
                   <label htmlFor={`size-${s}`}>{text}</label>
                 </span>
               );
