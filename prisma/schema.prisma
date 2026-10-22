@@ -16,6 +16,10 @@ model Product {
   bg        String   @default("#e6e3de")
   imageUrl  String? // 상품 이미지 주소 (없으면 배경색만 보여줍니다)
   description String? // 상품 설명 (상품 상세 페이지에 보입니다)
+  subCategory String? // 하위 분류 (아우터, 상의, 하의, 드레스, 셋업, 신발 / 악세서리)
+  inBest      Boolean  @default(false) // BEST 카테고리에도 표시
+  inNew       Boolean  @default(false) // NEW 카테고리에도 표시
+  soldOut     Boolean  @default(false) // 관리자가 품절로 표시 (재고와 상관없이)
   sale      String?
   position  Int      @default(0)
   createdAt DateTime @default(now())

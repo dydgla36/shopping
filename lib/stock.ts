@@ -23,6 +23,9 @@ export async function stockMap(productId: number): Promise<StockMap> {
 // 그 사이즈의 남은 수량. 재고를 관리하지 않으면 undefined(무제한).
 export async function availableFor(productId: number, size: string): Promise<number | undefined> {
   try {
+    // 관리자가 품절로 표시한 상품은 재고와 상관없이 0개입니다.
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { soldOut: true } });
+    if (product?.soldOut) return 0;
     const row = await prisma.productStock.findUnique({ where: { productId_size: { productId, size } } });
     return row?.quantity;
   } catch (e) {

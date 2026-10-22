@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { createProduct, updateProduct } from "@/app/actions/admin";
 import ProductCard from "@/components/ProductCard";
 import { priceView, unitPrice, won } from "@/lib/orders";
+import { SUB_CATEGORIES } from "@/lib/categories";
 import { btnDark, input, notice } from "@/app/admin/styles";
 
 const COLORS = ["#e6e3de", "#ddd8d0", "#d6d6d6", "#dcdcdc", "#e8dcd2", "#d9e0e3"];
@@ -39,14 +40,13 @@ async function prepare(file: File): Promise<Blob | null> {
 }
 const label = { display: "block", marginTop: 18, fontSize: 12, color: "#767676" } as const;
 
-export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; stock: Record<string, number> };
+export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; subCategory: string | null; inBest: boolean; inNew: boolean; soldOut: boolean; stock: Record<string, number> };
 
 // 상품 추가(product 없음)와 상품 수정(product 있음)에 같이 씁니다.
-export default function ProductForm({ categories, product }: { categories: string[]; product?: ProductInit }) {
+export default function ProductForm({ product }: { categories?: string[]; product?: ProductInit }) {
   const [state, action, pending] = useActionState(product ? updateProduct : createProduct, undefined);
   // 입력값을 상태로 들고 있어서, 오류가 나도 입력한 내용이 지워지지 않고 미리보기에도 바로 반영됩니다.
   const [v, setV] = useState({
-    category: product && categories.includes(product.category) ? product.category : categories[0] ?? "",
     name: product?.name ?? "",
     price: product ? String(product.price) : "",
     sale: (product?.sale ?? "").replace("%", ""),
@@ -54,10 +54,16 @@ export default function ProductForm({ categories, product }: { categories: strin
     bg: product?.bg ?? COLORS[0],
     imageUrl: product?.imageUrl ?? "",
     description: product?.description ?? "",
+    subCategory: product?.subCategory ?? "",
     stockS: product && product.stock.S !== undefined ? String(product.stock.S) : "",
     stockM: product && product.stock.M !== undefined ? String(product.stock.M) : "",
     stockL: product && product.stock.L !== undefined ? String(product.stock.L) : "",
   });
+  // 카테고리: 모든 상품은 WOMEN에 들어가고, BEST·NEW에도 표시할지 고릅니다. 품절 표시도 여기서 정합니다.
+  const [flags, setFlags] = useState({ inBest: product?.inBest ?? false, inNew: product?.inNew ?? false, soldOut: product?.soldOut ?? false });
+  const toggle = (k: keyof typeof flags) => () => setFlags((f) => ({ ...f, [k]: !f[k] }));
+  const chipStyle = (on: boolean) => ({ display: "inline-block", padding: "10px 16px", border: `1px solid ${on ? "#111" : "#ccc"}`, background: on ? "#111" : "#fff", color: on ? "#fff" : "#111", cursor: "pointer", font: "500 13px 'Noto Sans KR',sans-serif" }) as const;
+  const hiddenInput = { position: "absolute", opacity: 0, width: 1, height: 1 } as const;
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((p) => ({ ...p, [k]: e.target.value }));
   const imageOk = /^(https?:\/\/|\/api\/product-image\/)/i.test(v.imageUrl);
 
@@ -128,11 +134,26 @@ export default function ProductForm({ categories, product }: { categories: strin
     <div style={{ display: "flex", flexWrap: "wrap", gap: 48, marginTop: 24, alignItems: "flex-start" }}>
       <form action={action} onSubmit={onSubmit} style={{ flex: "1 1 340px", maxWidth: 480 }}>
         {product && <input type="hidden" name="id" value={product.id} />}
-        <label style={{ ...label, marginTop: 0 }}>카테고리
-          <select name="category" value={v.category} onChange={set("category")} style={{ ...input, marginTop: 6 }}>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
+        <input type="hidden" name="category" value="women" />
+        <fieldset style={{ ...label, marginTop: 0, border: 0, padding: 0 }}>
+          <legend style={{ padding: 0 }}>카테고리 (기본은 WOMEN이고, 아래 버튼으로 BEST·NEW에도 표시할 수 있어요)</legend>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            <span style={{ ...chipStyle(true), cursor: "default" }}>WOMEN (기본)</span>
+            <label style={chipStyle(flags.inBest)}><input type="checkbox" name="inBest" checked={flags.inBest} onChange={toggle("inBest")} style={hiddenInput} />{flags.inBest ? "✓ " : "+ "}BEST에도 표시</label>
+            <label style={chipStyle(flags.inNew)}><input type="checkbox" name="inNew" checked={flags.inNew} onChange={toggle("inNew")} style={hiddenInput} />{flags.inNew ? "✓ " : "+ "}NEW에도 표시</label>
+          </div>
+        </fieldset>
+        <fieldset style={{ ...label, border: 0, padding: 0 }}>
+          <legend style={{ padding: 0 }}>WOMEN 하위 분류 (카테고리 화면의 분류 버튼에 쓰여요)</legend>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {["", ...SUB_CATEGORIES].map((s) => (
+              <label key={s || "none"} style={chipStyle(v.subCategory === s)}>
+                <input type="radio" name="subCategory" value={s} checked={v.subCategory === s} onChange={set("subCategory")} style={hiddenInput} />
+                {s || "선택 안 함"}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label style={label}>상품 이름
           <input name="name" value={v.name} onChange={set("name")} required style={{ ...input, marginTop: 6 }} />
         </label>
@@ -170,6 +191,14 @@ export default function ProductForm({ categories, product }: { categories: strin
             })}
           </div>
         </fieldset>
+        <fieldset style={{ ...label, border: 0, padding: 0 }}>
+          <legend style={{ padding: 0 }}>품절</legend>
+          <label style={{ ...chipStyle(flags.soldOut), marginTop: 8 }}>
+            <input type="checkbox" name="soldOut" checked={flags.soldOut} onChange={toggle("soldOut")} style={hiddenInput} />
+            {flags.soldOut ? "✓ 품절 처리됨" : "품절 처리하기"}
+          </label>
+          <span style={{ display: "block", marginTop: 6 }}>켜면 재고 숫자와 상관없이 SOLD OUT으로 표시되고, 담기·구매할 수 없어요.</span>
+        </fieldset>
         <label style={label}>이미지 파일 올리기 (선택, JPG·PNG·WEBP·GIF · 큰 이미지는 자동으로 줄여서 저장해요)
           <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onFile} disabled={uploading} style={{ display: "block", marginTop: 6, fontSize: 13 }} />
         </label>
@@ -191,7 +220,7 @@ export default function ProductForm({ categories, product }: { categories: strin
       <div style={{ width: 240, flex: "none" }}>
         <div style={{ fontSize: 12, color: "#767676", marginBottom: 12 }}>미리보기</div>
         <div style={{ pointerEvents: "none" }}>
-          <ProductCard name={v.name || "상품 이름"} {...priceView(Number(v.price) || 0, v.sale ? `${v.sale}%` : null)} bg={v.bg} sale={v.sale ? `${v.sale}%` : undefined} imageUrl={imageOk && check.state === "ok" ? v.imageUrl : undefined} />
+          <ProductCard name={v.name || "상품 이름"} {...priceView(Number(v.price) || 0, v.sale ? `${v.sale}%` : null)} bg={v.bg} sale={v.sale ? `${v.sale}%` : undefined} soldOut={flags.soldOut} imageUrl={imageOk && check.state === "ok" ? v.imageUrl : undefined} />
         </div>
         <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.6, color: check.state === "ok" ? "#2d6a2d" : check.state === "error" ? "#c0392b" : "#767676" }} role="status">
           {v.imageUrl && !imageOk && "이미지 주소는 http:// 또는 https://로 시작해야 해요."}
