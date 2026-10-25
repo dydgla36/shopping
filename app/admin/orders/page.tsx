@@ -65,7 +65,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
               <span>{o.recipientName}<br /><span style={{ fontSize: 12, color: "#767676" }}>{o.recipientPhone}</span></span>
               <span style={{ fontSize: 13, color: "#444" }}>{o.address}{o.addressDetail ? ` ${o.addressDetail}` : ""}</span>
               <span style={{ fontFamily: "Archivo,sans-serif" }}>{won(o.total)}</span>
-              <span style={{ fontWeight: 700 }}>{STATUS_LABEL[o.status] ?? o.status}</span>
+              <span style={{ fontWeight: 700 }}>
+                {STATUS_LABEL[o.status] ?? o.status}
+                {o.status === "CANCELED" && o.cancelReason && (
+                  <span title={o.cancelReason} style={{ display: "block", marginTop: 2, fontWeight: 400, fontSize: 11, lineHeight: 1.4, color: "#c0392b" }}>
+                    {o.canceledBy === "CUSTOMER" ? "고객: " : ""}{o.cancelReason.length > 16 ? `${o.cancelReason.slice(0, 16)}…` : o.cancelReason}
+                  </span>
+                )}
+              </span>
             </div>
           ))}
         </div>

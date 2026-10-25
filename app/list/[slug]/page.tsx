@@ -24,7 +24,7 @@ export default async function ListPage({ params, searchParams }: { params: Promi
   const sub = sp.sub && SUB_CATEGORIES.includes(sp.sub) ? sp.sub : undefined;
   const sort: SortKey = SORTS.find(([k]) => k === sp.sort)?.[0] ?? "new";
   const page = Math.max(1, Number(sp.page) || 1);
-  const { items, total, pages } = await getListProducts(slug, { sub, sort, page });
+  const { items, total, pages, failed } = await getListProducts(slug, { sub, sort, page });
 
   // 분류·정렬을 바꿀 때 서로 유지하고, 페이지는 1로 돌아갑니다.
   const href = (over: { sub?: string; sort?: string }) => {
@@ -56,10 +56,10 @@ export default async function ListPage({ params, searchParams }: { params: Promi
           </span>
         </div>
         {items.length === 0 ? (
-          <div style={{ padding: "64px 0", textAlign: "center", fontSize: 14, color: "#767676" }}>조건에 맞는 상품이 없어요.</div>
+          <div style={{ padding: "64px 0", textAlign: "center", fontSize: 14, color: "#767676" }}>{failed ? "상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : "조건에 맞는 상품이 없어요."}</div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "40px 20px", marginTop: 32 }}>
-            {items.map((item) => <ProductCard key={item.id ?? item.name} {...item} />)}
+            {items.map((item) => <ProductCard key={item.id} {...item} />)}
           </div>
         )}
         <Pager page={page} pages={pages} base={`/list/${slug}`} params={{ sub, sort: sort === "new" ? undefined : sort }} />

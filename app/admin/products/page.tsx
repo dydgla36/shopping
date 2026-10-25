@@ -24,7 +24,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
         <h2 style={h2}>상품 관리</h2>
         <Link href="/admin/products/new" style={{ ...btnDark, display: "inline-block" }}>+ 상품 추가</Link>
       </div>
-      <p style={{ margin: "8px 0 0", fontSize: 13, color: "#767676" }}>여기서 바꾼 내용은 카테고리 목록과 상품 상세 페이지에 바로 반영돼요. 상품이 하나도 없으면 목록 화면은 샘플 상품을 대신 보여줘요. 최근에 등록한 상품이 위에 보여요.</p>
+      <p style={{ margin: "8px 0 0", fontSize: 13, color: "#767676" }}>여기서 바꾼 내용은 카테고리 목록과 상품 상세 페이지에 바로 반영돼요. 최근에 등록한 상품이 위에 보여요.</p>
       {removed.length > 0 && (
         <div role="alert" style={{ marginTop: 16, padding: "14px 16px", background: "#fbeeee", color: "#c0392b", fontSize: 13, lineHeight: 1.8 }}>
           없어진 카테고리({Array.from(new Set(removed.map((p) => p.category))).join(", ")})에 상품 {removed.length}개가 남아 있어요. 이 상품들은 사이트 어디에도 보이지 않아요.

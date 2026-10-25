@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import ActionForm from "@/components/ActionForm";
 import { createClaim } from "@/app/actions/claims";
+import { cancelMyOrder } from "@/app/actions/cancel";
 import { CLAIM_STATUS, CLAIM_TYPE, STATUS_LABEL, fmtDate, fullAddress, itemOption, won } from "@/lib/orders";
 
 export const metadata = { title: "주문 상세" };
@@ -24,7 +25,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   if (!order) notFound();
   const claims = await prisma.claim.findMany({ where: { orderId: order.id }, orderBy: { createdAt: "desc" } }).catch(() => []);
   const openClaim = claims.some((c) => c.status === "RECEIVED" || c.status === "PROCESSING");
-  const claimTypes = ["PENDING", "PAID", "PREPARING"].includes(order.status) ? ["CANCEL"] : ["SHIPPING", "DELIVERED"].includes(order.status) ? ["RETURN", "EXCHANGE"] : [];
+  const cancelable = ["PENDING", "PAID"].includes(order.status); // 배송 준비 전: 사유를 적고 바로 취소
+  const claimTypes = order.status === "PREPARING" ? ["CANCEL"] : ["SHIPPING", "DELIVERED"].includes(order.status) ? ["RETURN", "EXCHANGE"] : [];
 
   return (
     <>
@@ -39,6 +41,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           <div><div style={{ fontSize: 12, color: "#767676" }}>주문 상태</div><div style={{ marginTop: 6, fontWeight: 700, fontSize: 18 }}>{STATUS_LABEL[order.status] ?? order.status}</div></div>
         </div>
 
+        {order.status === "CANCELED" && (
+          <div role="status" style={{ marginTop: 20, padding: "16px 20px", background: "#fbeeee", fontSize: 14, lineHeight: 1.8 }}>
+            <b>취소된 주문이에요.</b>{order.canceledAt && <span style={{ color: "#767676" }}> ({fmtDate(order.canceledAt)})</span>}
+            {order.cancelReason && <div style={{ marginTop: 4, whiteSpace: "pre-line" }}>취소 사유: {order.cancelReason}</div>}
+          </div>
+        )}
         {(order.carrier || order.trackingNumber) && (
           <div style={{ marginTop: 20, padding: "16px 20px", border: "1px solid #111", fontSize: 14, lineHeight: 1.8 }}>
             <b style={{ marginRight: 12 }}>배송 조회</b>
@@ -81,8 +89,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             <div style={{ ...line, borderBottom: 0, fontWeight: 700 }}><span>총 결제금액</span><span style={{ font: "800 20px Archivo,sans-serif" }}>{won(order.total)}</span></div>
           </div>
         </div>
+        {cancelable && (
+          <div style={{ maxWidth: 520, marginTop: 8 }}>
+            <div style={{ marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", ...head }}>주문 취소</div>
+            <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: 1.7, color: "#555" }}>배송 준비 전에는 바로 취소할 수 있어요. 취소 사유는 판매자에게 전달되고, 사용한 쿠폰·적립금은 돌려드려요.</p>
+            <ActionForm action={cancelMyOrder} submitLabel="주문 취소하기" confirmMessage="이 주문을 취소할까요? 취소하면 되돌릴 수 없어요.">
+              <input type="hidden" name="orderNumber" value={order.orderNumber} />
+              <label className="fld">취소 사유<textarea name="reason" rows={4} maxLength={500} placeholder="취소 사유를 5자 이상 입력해 주세요" required /></label>
+            </ActionForm>
+          </div>
+        )}
         <div style={{ maxWidth: 520, marginTop: 8 }}>
-          <div style={{ marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", ...head }}>취소 / 반품 / 교환</div>
+          <div style={{ marginTop: 40, paddingBottom: 14, borderBottom: "1px solid #111", ...head }}>{order.status === "PREPARING" ? "취소 요청" : "반품 / 교환"}</div>
           {claims.map((c) => (
             <div key={c.id} style={{ padding: "14px 0", borderBottom: "1px solid #e5e5e5", fontSize: 14 }}>
               <b>{CLAIM_TYPE[c.type] ?? c.type}</b> · {CLAIM_STATUS[c.status] ?? c.status} · <span style={{ color: "#767676" }}>{fmtDate(c.createdAt)}</span>
@@ -100,7 +118,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             </ActionForm>
           ) : (
             <p style={{ margin: "16px 0 0", fontSize: 13, color: "#767676" }}>
-              {openClaim ? "처리 중인 신청이 있어요. 처리가 끝나면 다시 신청할 수 있어요." : order.status === "CANCELED" ? "취소된 주문이에요." : "지금은 신청할 수 없는 주문이에요."}
+              {openClaim ? "처리 중인 신청이 있어요. 처리가 끝나면 다시 신청할 수 있어요." : order.status === "CANCELED" ? "취소된 주문이에요." : ["PENDING", "PAID"].includes(order.status) ? "배송 준비 전에는 위의 '주문 취소'로 바로 취소할 수 있어요." : "지금은 신청할 수 없는 주문이에요."}
             </p>
           )}
         </div>

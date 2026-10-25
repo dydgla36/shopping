@@ -14,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
   const here = `/checkout${qs ? `?${qs}` : ""}`;
   const user = await getCurrentUser();
 
-  // 비회원은 상품 상세의 BUY NOW 주문만 할 수 있습니다. (장바구니·샘플 주문은 로그인 필요)
+  // 비회원은 상품 상세의 BUY NOW 주문만 할 수 있습니다. (장바구니 주문은 로그인 필요)
   if (!user && (sp.cart === "1" || !sp.product)) redirect(`/login?next=${encodeURIComponent(here)}`);
 
   const lines = await resolveLines({ ...sp, cart: sp.cart === "1", userId: user?.id });

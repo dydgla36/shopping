@@ -8,8 +8,9 @@ import { cancelOrderTx } from "@/lib/orderOps";
 import { CLAIM_STATUS, CLAIM_TYPE } from "@/lib/orders";
 import type { ActionState } from "@/components/ActionForm";
 
-// 취소는 배송 전에, 반품·교환은 배송이 시작된 뒤에 신청할 수 있습니다.
-const CANCEL_OK = ["PENDING", "PAID", "PREPARING"];
+// 배송 준비 전에는 주문 상세에서 사유를 적고 바로 취소합니다(app/actions/cancel.ts).
+// 배송 준비 중에는 취소 요청, 배송이 시작된 뒤에는 반품·교환을 신청합니다.
+const CANCEL_OK = ["PREPARING"];
 const RETURN_OK = ["SHIPPING", "DELIVERED"];
 
 export async function createClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -24,7 +25,7 @@ export async function createClaim(_prev: ActionState, formData: FormData): Promi
   if (!order) return { error: "주문을 찾을 수 없어요." };
   if (order.claims.some((c) => c.status === "RECEIVED" || c.status === "PROCESSING")) return { error: "이미 처리 중인 신청이 있어요." };
   if (type === "CANCEL" ? !CANCEL_OK.includes(order.status) : !RETURN_OK.includes(order.status))
-    return { error: type === "CANCEL" ? "배송이 시작된 주문은 취소할 수 없어요. 반품·교환으로 신청해 주세요." : "배송이 시작된 주문만 반품·교환을 신청할 수 있어요." };
+    return { error: type === "CANCEL" ? (["PENDING", "PAID"].includes(order.status) ? "배송 준비 전 주문은 '주문 취소'로 바로 취소할 수 있어요." : "배송이 시작된 주문은 취소할 수 없어요. 반품·교환으로 신청해 주세요.") : "배송이 시작된 주문만 반품·교환을 신청할 수 있어요." };
 
   await prisma.claim.create({ data: { userId: user.id, orderId: order.id, type, reason } });
   redirect("/claims");
@@ -42,7 +43,7 @@ export async function updateClaim(formData: FormData) {
     const claim = await tx.claim.findUnique({ where: { id } });
     if (!claim) return;
     await tx.claim.update({ where: { id }, data: { status, adminNote } });
-    if (status === "DONE" && claim.status !== "DONE" && (claim.type === "CANCEL" || claim.type === "RETURN")) await cancelOrderTx(tx, claim.orderId);
+    if (status === "DONE" && claim.status !== "DONE" && (claim.type === "CANCEL" || claim.type === "RETURN")) await cancelOrderTx(tx, claim.orderId, { by: "CUSTOMER", reason: claim.reason });
   });
   redirect("/admin/claims?saved=1");
 }

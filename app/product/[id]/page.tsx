@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
@@ -5,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { SIZES } from "@/lib/checkout";
 import { LOW_STOCK, soldOutOf, stockMap, type StockMap } from "@/lib/stock";
-import { priceView, won } from "@/lib/orders";
+import { priceView } from "@/lib/orders";
 import { addToCart, buyNow } from "@/app/actions/cart";
 import { toggleWishlist } from "@/app/actions/wishlist";
 import { maskName } from "@/lib/mask";
@@ -13,9 +14,10 @@ import { fmtDate } from "@/lib/orders";
 import { stars } from "@/lib/ui";
 
 // 관리자가 DB에 등록한 상품의 상세 페이지입니다. (/product/상품번호)
+// getProduct는 제목(generateMetadata)과 화면이 같은 요청 안에서 함께 써도 DB 조회를 한 번만 합니다.
 export const dynamic = "force-dynamic";
 
-async function getProduct(raw: string) {
+const getProduct = cache(async (raw: string) => {
   const id = Number(raw);
   if (!Number.isInteger(id) || !process.env.DATABASE_URL) return null;
   try {
@@ -24,7 +26,7 @@ async function getProduct(raw: string) {
     console.error("상품 조회 실패:", e);
     return null;
   }
-}
+});
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const product = await getProduct((await params).id);

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ActionForm from "@/components/ActionForm";
 import { prisma } from "@/lib/db";
+import { cancelGuestOrder } from "@/app/actions/cancel";
 import { limitedToken, tokenOk } from "@/lib/guest";
 import { maskAddress, maskName, maskPhone } from "@/lib/mask";
 import { STATUS_LABEL, fmtDate, fullAddress, itemOption, won } from "@/lib/orders";
@@ -37,6 +39,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           <div><div style={{ fontSize: 12, color: "#767676" }}>주문일</div><div style={{ marginTop: 6, font: "800 18px Archivo,sans-serif" }}>{fmtDate(order.createdAt)}</div></div>
           <div><div style={{ fontSize: 12, color: "#767676" }}>주문 상태</div><div style={{ marginTop: 6, fontWeight: 700, fontSize: 18 }}>{STATUS_LABEL[order.status] ?? order.status}</div></div>
         </div>
+        {order.status === "CANCELED" && (
+          <div role="status" style={{ marginTop: 20, padding: "16px 20px", background: "#fbeeee", fontSize: 14, lineHeight: 1.8 }}>
+            <b>취소된 주문이에요.</b>{order.canceledAt && <span style={{ color: "#767676" }}> ({fmtDate(order.canceledAt)})</span>}
+            {order.cancelReason && <div style={{ marginTop: 4, whiteSpace: "pre-line" }}>취소 사유: {order.cancelReason}</div>}
+          </div>
+        )}
         {(order.carrier || order.trackingNumber) && (
           <div style={{ marginTop: 20, padding: "16px 20px", border: "1px solid #111", fontSize: 14, lineHeight: 1.8 }}>
             <b style={{ marginRight: 12 }}>배송 조회</b>
@@ -74,7 +82,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         <Row a="배송비" b={won(order.shippingFee)} />
         <div style={{ ...line, borderBottom: 0, fontWeight: 700 }}><span>총 결제금액</span><span style={{ font: "800 20px Archivo,sans-serif" }}>{won(order.total)}</span></div>
 
-        <p style={{ margin: "28px 0 0", fontSize: 13, lineHeight: 1.8, color: "#767676" }}>비회원 주문의 취소·반품·교환은 고객센터로 문의해 주세요. [고객센터 전화번호 · 이메일]</p>
+        {full && ["PENDING", "PAID"].includes(order.status) && (
+          <>
+            <Title>주문 취소</Title>
+            <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: 1.7, color: "#555" }}>배송 준비 전에는 바로 취소할 수 있어요. 취소 사유는 판매자에게 전달돼요.</p>
+            <ActionForm action={cancelGuestOrder} submitLabel="주문 취소하기" confirmMessage="이 주문을 취소할까요? 취소하면 되돌릴 수 없어요.">
+              <input type="hidden" name="orderNumber" value={order.orderNumber} />
+              <input type="hidden" name="token" value={t ?? ""} />
+              <label className="fld">취소 사유<textarea name="reason" rows={4} maxLength={500} placeholder="취소 사유를 5자 이상 입력해 주세요" required /></label>
+            </ActionForm>
+          </>
+        )}
+        <p style={{ margin: "28px 0 0", fontSize: 13, lineHeight: 1.8, color: "#767676" }}>배송 준비 전에는 위에서 직접 취소할 수 있어요(주문 완료 화면이나 메일의 링크로 열었을 때). 그 밖의 취소·반품·교환은 고객센터로 문의해 주세요. [고객센터 전화번호 · 이메일]</p>
         <div style={{ marginTop: 32 }}><Link href="/" style={{ display: "inline-block", padding: "14px 24px", border: "1px solid #111", font: "700 12px Archivo,sans-serif", letterSpacing: ".08em" }}>HOME</Link></div>
       </section>
     </>

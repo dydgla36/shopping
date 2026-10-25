@@ -8,6 +8,7 @@ import { SIZES } from "@/lib/checkout";
 import { STATUS_LABEL } from "@/lib/orders";
 import { lists } from "@/lib/lists";
 import { SUB_CATEGORIES } from "@/lib/categories";
+import { isDuplicate } from "@/lib/errors";
 import { cancelOrderTx, earnPointsTx } from "@/lib/orderOps";
 import { notifyOrder } from "@/lib/notify";
 
@@ -28,7 +29,7 @@ export async function updateOrder(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     // 취소: 재고, 적립금, 쿠폰을 되돌립니다.
-    if (status === "CANCELED" && order!.status !== "CANCELED") await cancelOrderTx(tx, order!.id);
+    if (status === "CANCELED" && order!.status !== "CANCELED") await cancelOrderTx(tx, order!.id, { by: "ADMIN" });
     await tx.order.update({
       where: { orderNumber: no },
       data: {
@@ -73,7 +74,6 @@ function cleanImage(v: string): string | null | false {
 const cleanColor = (v: string) => (/^#[0-9a-fA-F]{6}$/.test(v) ? v : "#e6e3de");
 const IMG_ERR = "이미지는 파일로 올리거나, http:// 또는 https://로 시작하는 올바른 주소를 넣어 주세요.";
 const DUP = "같은 카테고리에 같은 이름의 상품이 이미 있어요.";
-const isDuplicate = (e: unknown) => (e as { code?: string })?.code === "P2002";
 
 export type ProductState = { error?: string } | undefined;
 

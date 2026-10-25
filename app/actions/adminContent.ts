@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
+import { isDuplicate } from "@/lib/errors";
 import type { ActionState } from "@/components/ActionForm";
 
 // 관리자 전용 동작 모음 (공지, 문의 답변, 후기 삭제). 모든 동작은 맨 처음에 관리자인지 확인합니다.
@@ -78,7 +79,7 @@ export async function createCoupon(_prev: ActionState, formData: FormData): Prom
   try {
     await prisma.coupon.create({ data: { code, name, kind, value, minOrder, expiresAt } });
   } catch (e) {
-    return { error: (e as { code?: string })?.code === "P2002" ? "이미 있는 쿠폰 번호예요." : "저장 중 문제가 생겼어요." };
+    return { error: isDuplicate(e) ? "이미 있는 쿠폰 번호예요." : "저장 중 문제가 생겼어요." };
   }
   return { ok: `쿠폰을 만들었어요. 고객에게 쿠폰 번호 ${code}를 알려 주세요.` };
 }

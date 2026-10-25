@@ -31,6 +31,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <p style={{ margin: "8px 0 0", fontSize: 13, color: "#767676" }}>주문일 {fmtDate(order.createdAt)}</p>
       {sp.saved && <div style={notice(true)} role="status">저장했어요.</div>}
       {sp.error && <div style={notice(false)} role="alert">{sp.error}</div>}
+      {order.status === "CANCELED" && (
+        <div role="status" style={{ marginTop: 16, padding: "14px 18px", background: "#fbeeee", color: "#7a2a22", fontSize: 14, lineHeight: 1.8 }}>
+          <b>{order.canceledBy === "CUSTOMER" ? "고객이 취소한 주문이에요" : order.canceledBy === "ADMIN" ? "관리자가 취소한 주문이에요" : "취소된 주문이에요"}</b>
+          {order.canceledAt && <span> ({fmtDate(order.canceledAt)})</span>}
+          {order.cancelReason && <div style={{ marginTop: 4, whiteSpace: "pre-line" }}>취소 사유: {order.cancelReason}</div>}
+        </div>
+      )}
 
       <Title>배송 처리</Title>
       <p style={{ margin: "12px 0 0", fontSize: 12, color: emailConfigured() ? "#2d6a2d" : "#767676" }}>이메일 알림: {emailConfigured() ? "켜짐 — 상태를 발송 중·배송 완료·취소로 바꾸면 고객에게 메일이 가요." : "꺼짐 (이메일 서비스가 설정되지 않았어요)"}</p>
