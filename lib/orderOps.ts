@@ -4,8 +4,9 @@ import { EARN_REASON, POINT_RATE } from "@/lib/orders";
 type Tx = Prisma.TransactionClient;
 
 // 주문 취소: 재고를 되돌리고, 사용한 적립금·쿠폰을 돌려주고, 이미 받은 적립금은 회수합니다.
+// meta에는 누가(고객/관리자) 왜 취소했는지를 적어 두어, 관리자와 고객이 주문 상세에서 볼 수 있게 합니다.
 // (비회원 주문은 적립금·쿠폰이 없습니다.)
-export async function cancelOrderTx(tx: Tx, orderId: number) {
+export async function cancelOrderTx(tx: Tx, orderId: number, meta?: { by: "CUSTOMER" | "ADMIN"; reason?: string }) {
   const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true } });
   if (!order || order.status === "CANCELED") return;
 
@@ -27,7 +28,7 @@ export async function cancelOrderTx(tx: Tx, orderId: number) {
       await tx.pointLog.create({ data: { userId, amount: -amount, reason: `주문 취소 적립금 회수 (${order.orderNumber})`, orderId } });
     }
   }
-  await tx.order.update({ where: { id: orderId }, data: { status: "CANCELED" } });
+  await tx.order.update({ where: { id: orderId }, data: { status: "CANCELED", canceledAt: new Date(), canceledBy: meta?.by ?? null, cancelReason: meta?.reason ?? null } });
 }
 
 // 배송 완료 시 적립금 지급 (회원 주문만, 주문당 한 번만)

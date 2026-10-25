@@ -8,12 +8,13 @@ type Props = {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   submitLabel: string;
   resetOnSuccess?: boolean;
+  confirmMessage?: string; // 있으면 제출 전에 "정말 할까요?" 확인창을 띄웁니다.
   children: React.ReactNode;
 };
 
 // 서버 동작(action)에 연결된 공통 폼입니다. 오류 문구와 완료 문구를 폼 아래에 보여주고,
 // 오류가 나도 입력한 내용이 지워지지 않게 합니다.
-export default function ActionForm({ action, submitLabel, resetOnSuccess, children }: Props) {
+export default function ActionForm({ action, submitLabel, resetOnSuccess, confirmMessage, children }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function ActionForm({ action, submitLabel, resetOnSuccess, childr
       ref={ref}
       onSubmit={(e) => {
         e.preventDefault();
+        if (confirmMessage && !window.confirm(confirmMessage)) return;
         const data = new FormData(e.currentTarget);
         startTransition(() => formAction(data));
       }}

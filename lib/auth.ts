@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
@@ -34,7 +35,8 @@ export async function createSession(userId: number, days: number) {
 }
 
 // 현재 로그인한 회원 (없거나 만료되었으면 null)
-export async function getCurrentUser() {
+// 헤더와 화면이 같은 요청 안에서 여러 번 불러도 DB 조회는 한 번만 합니다. (cache)
+export const getCurrentUser = cache(async () => {
   if (!process.env.DATABASE_URL) return null;
   const id = (await cookies()).get(COOKIE)?.value;
   if (!id) return null;
@@ -53,7 +55,7 @@ export async function getCurrentUser() {
     console.error("세션 조회 실패:", e);
     return null;
   }
-}
+});
 
 export async function destroySession() {
   const store = await cookies();

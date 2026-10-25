@@ -20,12 +20,6 @@ export function fmtDate(d: Date) {
 export const itemOption = (i: { color?: string | null; size?: string | null }) =>
   [i.color && `COLOR ${i.color}`, i.size && `SIZE ${i.size}`].filter(Boolean).join(" / ");
 
-// 장바구니는 아직 DB에 저장되지 않아서, 주문/결제 화면에 보이는 상품 2개를 그대로 주문합니다.
-// 가격은 브라우저가 보낸 값이 아니라 여기(서버)의 값으로 계산합니다.
-export const CHECKOUT_ITEMS = [
-  { name: "부클 벨티드 코트", price: 276000, quantity: 1, color: "아이보리", size: "M", bg: "#e6e3de" },
-  { name: "데님 셔츠", price: 145000, quantity: 1, color: "인디고", size: "S", bg: "#ddd8d0" },
-];
 export const SHIPPING_FEE = 0;
 export const POINT_RATE = 0.01; // 배송 완료 시 결제 금액의 1%를 적립금으로 줍니다.
 export const DISCOUNT = 0;

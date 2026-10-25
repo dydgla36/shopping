@@ -4,7 +4,7 @@ type Props = { id?: number; name: string; price: string; finalPrice?: string; bg
 
 export default function ProductCard({ id, name, price, finalPrice, bg = "#e6e3de", sale, imageUrl, soldOut }: Props) {
   return (
-    <Link className="card" href={id ? `/product/${id}` : "/product"}>
+    <Link className="card" href={id ? `/product/${id}` : "#"}>
       <div className="ph" style={{ background: bg, position: "relative", overflow: "hidden" }}>
         {imageUrl && (
           // 관리자가 입력한 외부 이미지 주소를 그대로 보여줍니다.

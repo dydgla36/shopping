@@ -12,6 +12,7 @@ export type NotifyOrder = {
   carrier: string | null;
   trackingNumber: string | null;
   guestToken: string | null;
+  reason?: string | null; // 취소 사유
   items: { name: string; quantity: number; size: string | null }[];
 };
 type Kind = "placed" | "shipping" | "delivered" | "canceled";
@@ -32,7 +33,8 @@ export async function notifyOrder(kind: Kind, o: NotifyOrder) {
     const link = o.guestToken ? `${base}/guest-order?no=${no}&t=${o.guestToken}` : `${base}/order-detail?no=${no}`;
     const list = o.items.map((i) => `<li>${esc(i.name)}${i.size ? ` (${esc(i.size)})` : ""} × ${i.quantity}</li>`).join("");
     const tracking = kind === "shipping" && (o.carrier || o.trackingNumber) ? `<p>택배사: ${esc(o.carrier ?? "-")}<br>운송장 번호: ${esc(o.trackingNumber ?? "-")}</p>` : "";
-    const html = `<p>${esc(o.ordererName)}님, ${TEXT[kind].intro}</p><p>주문번호: <b>${esc(o.orderNumber)}</b><br>결제 금액: ${won(o.total)} (${esc(o.paymentMethod)})</p><ul>${list}</ul>${tracking}<p><a href="${link}">주문 내역 보기</a></p>`;
+    const reason = kind === "canceled" && o.reason ? `<p>취소 사유: ${esc(o.reason)}</p>` : "";
+    const html = `<p>${esc(o.ordererName)}님, ${TEXT[kind].intro}</p>${reason}<p>주문번호: <b>${esc(o.orderNumber)}</b><br>결제 금액: ${won(o.total)} (${esc(o.paymentMethod)})</p><ul>${list}</ul>${tracking}<p><a href="${link}">주문 내역 보기</a></p>`;
     await sendEmail(o.ordererEmail, `[GABBY] ${TEXT[kind].subject} (${o.orderNumber})`, html);
 
     // 새 주문은 관리자에게도 알립니다. (환경 변수 ADMIN_EMAIL이 있을 때)
@@ -41,5 +43,20 @@ export async function notifyOrder(kind: Kind, o: NotifyOrder) {
     }
   } catch (e) {
     console.error("주문 알림 메일 실패:", e);
+  }
+}
+
+// 고객이 주문을 취소하면 관리자에게 사유와 함께 알립니다. (환경 변수 ADMIN_EMAIL이 있을 때)
+export async function notifyAdminCanceled(o: { orderNumber: string; ordererName: string; total: number; reason: string }) {
+  if (!emailConfigured() || !process.env.ADMIN_EMAIL) return;
+  try {
+    const base = await siteBase();
+    await sendEmail(
+      process.env.ADMIN_EMAIL,
+      `[GABBY] 고객이 주문을 취소했어요 (${o.orderNumber})`,
+      `<p>${esc(o.ordererName)}님이 주문을 취소했어요. (${won(o.total)})</p><p>취소 사유: ${esc(o.reason)}</p><p><a href="${base}/admin/orders/${encodeURIComponent(o.orderNumber)}">관리자에서 보기</a></p>`,
+    );
+  } catch (e) {
+    console.error("관리자 취소 알림 메일 실패:", e);
   }
 }

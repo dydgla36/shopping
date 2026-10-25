@@ -95,6 +95,9 @@ model Order {
   carrier        String? // 택배사
   guestToken     String? // 비회원 주문 조회용 비밀 토큰 (주문 완료 화면·이메일의 링크에 들어갑니다)
   postcode       String? // 우편번호
+  cancelReason   String? // 취소 사유 (고객이 취소할 때 적은 내용)
+  canceledAt     DateTime?
+  canceledBy     String? // CUSTOMER 고객 / ADMIN 관리자
   adminMemo      String? // 관리자가 남기는 메모 (고객의 주문 상세에 "판매자 안내"로 보입니다)
   trackingNumber String? // 운송장 번호
   items          OrderItem[]

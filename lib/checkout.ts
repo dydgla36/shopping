@@ -1,15 +1,12 @@
 import { prisma } from "@/lib/db";
-import { CHECKOUT_ITEMS, unitPrice } from "@/lib/orders";
+import { unitPrice } from "@/lib/orders";
 
 export type Line = { name: string; price: number; quantity: number; color: string | null; size: string | null; bg: string; productId: number | null };
 export const SIZES = ["S", "M", "L"];
 
-const samples: Line[] = CHECKOUT_ITEMS.map((i) => ({ ...i, productId: null }));
-
 // 주문/결제에 올릴 상품 목록.
 // - 상품 상세에서 BUY NOW로 오면: 그 상품 하나 (이름·가격은 DB 값)
 // - 장바구니에서 오면: 장바구니에 담은 상품 전체
-// - 그 밖에는: 기존 샘플 상품 2개
 // 상품을 찾을 수 없으면 null을 돌려줍니다.
 export async function resolveLines(p: { product?: string; size?: string; qty?: string; cart?: boolean; userId?: number }): Promise<Line[] | null> {
   // 장바구니에서 주문: 로그인한 회원의 장바구니 전체 (이름·가격은 DB 값)
@@ -19,7 +16,7 @@ export async function resolveLines(p: { product?: string; size?: string; qty?: s
     if (items.length === 0) return null;
     return items.map((i) => ({ name: i.product.name, price: unitPrice(i.product), quantity: i.quantity, color: null, size: i.size, bg: i.product.bg, productId: i.productId }));
   }
-  if (!p.product) return samples;
+  if (!p.product) return null;
   const id = Number(p.product);
   if (!Number.isInteger(id)) return null;
   const product = await prisma.product.findUnique({ where: { id } });
