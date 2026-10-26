@@ -6,6 +6,7 @@ import { createProduct, updateProduct } from "@/app/actions/admin";
 import ProductCard from "@/components/ProductCard";
 import { priceView, unitPrice, won } from "@/lib/orders";
 import { SUB_CATEGORIES } from "@/lib/categories";
+import { MAX_COLORS, parseColors, type ColorOption } from "@/lib/colors";
 import { btnDark, input, notice } from "@/app/admin/styles";
 
 const COLORS = ["#e6e3de", "#ddd8d0", "#d6d6d6", "#dcdcdc", "#e8dcd2", "#d9e0e3"];
@@ -38,9 +39,27 @@ async function prepare(file: File): Promise<Blob | null> {
     bitmap.close();
   }
 }
+const MAX_EXTRA = 5; // 추가 이미지 최대 장수
+
+// 이미지 파일 한 장을 줄여서 올리고, 저장된 이미지 주소를 돌려줍니다.
+async function uploadImage(file: File): Promise<string> {
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) throw new Error("JPG, PNG, WEBP, GIF 파일만 올릴 수 있어요.");
+  if (file.size > MAX_ORIGINAL) throw new Error("원본 파일은 20MB 이하여야 해요.");
+  const prepared = await prepare(file).catch(() => null);
+  if (!prepared) throw new Error("이미지를 읽을 수 없거나, 줄여도 2MB를 넘어요.");
+  const fd = new FormData();
+  fd.append("file", prepared, "upload");
+  const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+  if (res.status === 413) throw new Error("이미지가 너무 커요. 더 작은 이미지를 올려 주세요.");
+  const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!res.ok || !data.url) throw new Error(data.error ?? "업로드에 실패했어요.");
+  return data.url;
+}
+
+const smallBtn = { flex: 1, padding: "4px 0", border: "1px solid #ccc", background: "#fff", color: "#111", cursor: "pointer", fontSize: 12 } as const;
 const label = { display: "block", marginTop: 18, fontSize: 12, color: "#767676" } as const;
 
-export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; subCategory: string | null; inBest: boolean; inNew: boolean; soldOut: boolean; stock: Record<string, number> };
+export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; subCategory: string | null; inBest: boolean; inNew: boolean; soldOut: boolean; extraImages: string[]; colors: string[]; stock: Record<string, number> };
 
 // 상품 추가(product 없음)와 상품 수정(product 있음)에 같이 씁니다.
 export default function ProductForm({ product }: { categories?: string[]; product?: ProductInit }) {
@@ -64,6 +83,40 @@ export default function ProductForm({ product }: { categories?: string[]; produc
   const toggle = (k: keyof typeof flags) => () => setFlags((f) => ({ ...f, [k]: !f[k] }));
   const chipStyle = (on: boolean) => ({ display: "inline-block", padding: "10px 16px", border: `1px solid ${on ? "#111" : "#ccc"}`, background: on ? "#111" : "#fff", color: on ? "#fff" : "#111", cursor: "pointer", font: "500 13px 'Noto Sans KR',sans-serif" }) as const;
   const hiddenInput = { position: "absolute", opacity: 0, width: 1, height: 1 } as const;
+
+  // 추가 이미지(최대 5장)와 색상 옵션(최대 8개)
+  const [extra, setExtra] = useState<string[]>(product?.extraImages ?? []);
+  const [extraBusy, setExtraBusy] = useState(false);
+  const [extraMsg, setExtraMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [colorRows, setColorRows] = useState<ColorOption[]>(parseColors(product?.colors ?? []));
+  const moveExtra = (i: number, dir: -1 | 1) =>
+    setExtra((cur) => {
+      const next = [...cur];
+      [next[i], next[i + dir]] = [next[i + dir] as string, next[i] as string];
+      return next;
+    });
+  async function onExtraFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    const room = MAX_EXTRA - extra.length;
+    if (room <= 0) return setExtraMsg({ ok: false, text: `추가 이미지는 ${MAX_EXTRA}장까지예요.` });
+    setExtraBusy(true);
+    setExtraMsg(null);
+    const added: string[] = [];
+    let failed: string | null = null;
+    for (const file of files.slice(0, room)) {
+      try {
+        added.push(await uploadImage(file));
+      } catch (err) {
+        failed = err instanceof Error ? err.message : "업로드에 실패했어요.";
+        break;
+      }
+    }
+    if (added.length > 0) setExtra((cur) => [...cur, ...added]);
+    setExtraBusy(false);
+    setExtraMsg(failed ? { ok: false, text: failed } : { ok: true, text: files.length > room ? `${MAX_EXTRA}장까지만 올렸어요.` : `${added.length}장을 올렸어요.` });
+  }
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((p) => ({ ...p, [k]: e.target.value }));
   const imageOk = /^(https?:\/\/|\/api\/product-image\/)/i.test(v.imageUrl);
 
@@ -207,6 +260,40 @@ export default function ProductForm({ product }: { categories?: string[]; produc
         <label style={label}>이미지 주소 (파일을 올리면 자동으로 채워져요. 다른 사이트 주소를 직접 넣어도 돼요)
           <input name="imageUrl" value={v.imageUrl} onChange={set("imageUrl")} placeholder="https://..." style={{ ...input, marginTop: 6 }} />
         </label>
+        <fieldset style={{ ...label, border: 0, padding: 0 }}>
+          <legend style={{ padding: 0 }}>추가 이미지 (선택, 최대 {MAX_EXTRA}장 — 상품 상세에서 대표 이미지 아래 작은 사진으로 보여요)</legend>
+          <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" onChange={onExtraFiles} disabled={extraBusy || extra.length >= MAX_EXTRA} style={{ display: "block", marginTop: 8, fontSize: 13 }} />
+          {extraBusy && <div style={{ marginTop: 6 }}>올리는 중...</div>}
+          {extraMsg && <div role={extraMsg.ok ? "status" : "alert"} style={{ marginTop: 6, color: extraMsg.ok ? "#2d6a2d" : "#c0392b" }}>{extraMsg.text}</div>}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+            {extra.map((url, i) => (
+              <div key={url} style={{ width: 84 }}>
+                <input type="hidden" name="extraImages" value={url} />
+                <div style={{ aspectRatio: "1", background: "#eee", overflow: "hidden" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`추가 이미지 ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+                <div style={{ display: "flex", gap: 2, marginTop: 4 }}>
+                  <button type="button" onClick={() => moveExtra(i, -1)} disabled={i === 0} aria-label="앞으로 옮기기" style={smallBtn}>←</button>
+                  <button type="button" onClick={() => moveExtra(i, 1)} disabled={i === extra.length - 1} aria-label="뒤로 옮기기" style={smallBtn}>→</button>
+                  <button type="button" onClick={() => setExtra((cur) => cur.filter((_, n) => n !== i))} aria-label="삭제" style={{ ...smallBtn, color: "#c0392b" }}>×</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset style={{ ...label, border: 0, padding: 0 }}>
+          <legend style={{ padding: 0 }}>색상 옵션 (선택, 최대 {MAX_COLORS}개 — 고객이 상품 상세에서 색상을 골라요. 재고는 사이즈별로만 관리돼요)</legend>
+          {colorRows.map((c, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+              {c.name.trim() && <input type="hidden" name="colors" value={`${c.name.trim()}|${c.hex}`} />}
+              <input type="color" value={c.hex} aria-label="색상 고르기" onChange={(e) => setColorRows((rows) => rows.map((r, n) => (n === i ? { ...r, hex: e.target.value } : r)))} style={{ width: 40, height: 40, padding: 0, border: "1px solid #ccc", background: "#fff", flex: "none" }} />
+              <input type="text" value={c.name} maxLength={20} placeholder="색상 이름 (예: 블랙)" aria-label="색상 이름" onChange={(e) => setColorRows((rows) => rows.map((r, n) => (n === i ? { ...r, name: e.target.value } : r)))} style={{ ...input, flex: 1, width: "auto" }} />
+              <button type="button" onClick={() => setColorRows((rows) => rows.filter((_, n) => n !== i))} aria-label="색상 삭제" style={{ ...smallBtn, flex: "none", padding: "10px 12px", color: "#c0392b" }}>삭제</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => setColorRows((rows) => [...rows, { name: "", hex: "#111111" }])} disabled={colorRows.length >= MAX_COLORS} style={{ ...smallBtn, flex: "none", marginTop: 10, padding: "10px 16px" }}>+ 색상 추가</button>
+        </fieldset>
         <label style={label}>상품 설명 (선택, 상품 상세 페이지에 보여요)
           <textarea name="description" value={v.description} onChange={set("description")} rows={6} maxLength={2000} style={{ ...input, marginTop: 6, resize: "vertical" }} />
         </label>

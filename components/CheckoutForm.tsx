@@ -35,7 +35,7 @@ type Props = {
   balance: number;
   coupons: Coupon[];
   defaults: { name: string; phone: string; email: string };
-  hidden: { productId: string; size: string; qty: string; cart: string };
+  hidden: { productId: string; size: string; qty: string; color: string; cart: string };
   guest: boolean;
   loginHref: string;
 };
@@ -99,6 +99,7 @@ export default function CheckoutForm({ items, itemsTotal, shipping, balance, cou
         <input type="hidden" name="productId" value={hidden.productId} />
         <input type="hidden" name="size" value={hidden.size} />
         <input type="hidden" name="qty" value={hidden.qty} />
+        <input type="hidden" name="color" value={hidden.color} />
         <input type="hidden" name="cart" value={hidden.cart} />
         {guest && (
           <div style={{ marginTop: 8, padding: "14px 16px", background: "#f4f2ee", fontSize: 13, lineHeight: 1.7, color: "#444" }}>

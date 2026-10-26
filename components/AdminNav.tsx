@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const items = [
   ["대시보드", "/admin"],
   ["주문 / 배송 관리", "/admin/orders"],
+  ["통계 · 내보내기", "/admin/stats"],
   ["회원 관리", "/admin/members"],
   ["상품 관리", "/admin/products"],
   ["후기 관리", "/admin/reviews"],

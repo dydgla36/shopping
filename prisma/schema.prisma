@@ -20,6 +20,8 @@ model Product {
   inBest      Boolean  @default(false) // BEST 카테고리에도 표시
   inNew       Boolean  @default(false) // NEW 카테고리에도 표시
   soldOut     Boolean  @default(false) // 관리자가 품절로 표시 (재고와 상관없이)
+  extraImages String[] @default([]) // 추가 이미지 (대표 이미지 외, 최대 5장)
+  colors      String[] @default([]) // 색상 옵션 ("이름|#색상코드" 형태)
   sale      String?
   position  Int      @default(0)
   createdAt DateTime @default(now())
@@ -37,6 +39,7 @@ model Product {
 model User {
   id             Int      @id @default(autoincrement())
   loginId        String   @unique // 아이디
+  kakaoId        String?  @unique // 카카오 로그인으로 가입한 회원의 카카오 번호
   passwordHash   String // 비밀번호는 원문이 아니라 bcrypt 같은 방식으로 암호화한 값만 저장합니다
   name           String
   email          String   @unique
@@ -140,11 +143,12 @@ model CartItem {
   productId Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   size      String   @default("M")
+  color     String   @default("") // 색상 옵션이 없는 상품은 빈 값
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([userId, productId, size])
+  @@unique([userId, productId, size, color])
   @@index([userId])
 }
 
