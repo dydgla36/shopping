@@ -46,7 +46,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   }
 
   // 주문할 상품과 가격은 브라우저가 보낸 값이 아니라 서버(DB)에서 다시 확인합니다.
-  const lines = await resolveLines({ product: s("productId") || undefined, size: s("size") || undefined, qty: s("qty") || undefined, cart: fromCart, userId: user?.id });
+  const lines = await resolveLines({ product: s("productId") || undefined, size: s("size") || undefined, qty: s("qty") || undefined, color: s("color") || undefined, cart: fromCart, userId: user?.id });
   if (!lines) return { error: fromCart ? "장바구니가 비어 있어요." : "주문할 상품을 찾을 수 없어요." };
   const itemsTotal = lines.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const userCouponId = user ? Number(s("userCouponId")) || 0 : 0; // 쿠폰·적립금은 회원만

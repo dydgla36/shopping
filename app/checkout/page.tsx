@@ -7,7 +7,7 @@ import { SHIPPING_FEE, itemOption, won } from "@/lib/orders";
 
 export const metadata = { title: "주문/결제" };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ product?: string; size?: string; qty?: string; cart?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ product?: string; size?: string; qty?: string; color?: string; cart?: string }> }) {
   const sp = await searchParams;
   // 로그인 후 같은 상품으로 돌아오도록, 주소의 상품 정보(?product=...)를 함께 넘깁니다.
   const qs = new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === "string")).toString();
@@ -45,7 +45,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
         balance={Math.max(0, balance)}
         coupons={owned.map((u) => ({ id: u.id, name: u.coupon.name, kind: u.coupon.kind, value: u.coupon.value, minOrder: u.coupon.minOrder }))}
         defaults={{ name: user?.name ?? "", phone: user?.phone ?? "", email: user?.email ?? "" }}
-        hidden={{ productId: sp.product ?? "", size: sp.size ?? "", qty: sp.qty ?? "", cart: sp.cart === "1" ? "1" : "" }}
+        hidden={{ productId: sp.product ?? "", size: sp.size ?? "", qty: sp.qty ?? "", color: sp.color ?? "", cart: sp.cart === "1" ? "1" : "" }}
         guest={!user}
         loginHref={`/login?next=${encodeURIComponent(here)}`}
       />

@@ -7,8 +7,8 @@ export default function Page() {
   return (
     <section style={{ maxWidth: 520, margin: "0 auto", padding: "72px 24px 0" }}>
       <h1 style={{ margin: 0, textAlign: "center", font: "800 30px Archivo,sans-serif", letterSpacing: ".06em" }}>JOIN</h1>
-      <a className="btn" href="#" style={{ marginTop: 32, background: "#fee500", fontFamily: "'Noto Sans KR',sans-serif", letterSpacing: 0 }}>
-        카카오로 3초 가입 · 5% 쿠폰
+      <a className="btn" href={"/api/auth/kakao"} style={{ marginTop: 32, background: "#fee500", color: "#111", fontFamily: "'Noto Sans KR',sans-serif", letterSpacing: 0 }}>
+        카카오로 시작하기
       </a>
       <div style={{ margin: "28px 0 0", textAlign: "center", fontSize: 12, color: "#767676" }}>또는 이메일로 가입</div>
       <SignupForm />

@@ -9,6 +9,7 @@ import { STATUS_LABEL } from "@/lib/orders";
 import { lists } from "@/lib/lists";
 import { SUB_CATEGORIES } from "@/lib/categories";
 import { isDuplicate } from "@/lib/errors";
+import { MAX_COLORS, serializeColor } from "@/lib/colors";
 import { cancelOrderTx, earnPointsTx } from "@/lib/orderOps";
 import { notifyOrder } from "@/lib/notify";
 
@@ -58,6 +59,7 @@ export async function updateOrder(formData: FormData) {
 // 이 사이트(DB)에 올린 이미지 주소: /api/product-image/이미지번호
 const INTERNAL = /^\/api\/product-image\/([A-Za-z0-9_-]{10,40})$/;
 const internalId = (url?: string | null) => (url ? INTERNAL.exec(url)?.[1] : undefined);
+const internalIds = (urls: (string | null | undefined)[]) => urls.map(internalId).filter((x): x is string => Boolean(x));
 
 // 이미지 주소: 비어 있으면 null, 올린 이미지나 http(s) 주소면 그 값, 그 밖의 값이면 false
 function cleanImage(v: string): string | null | false {
@@ -85,6 +87,35 @@ function parseSale(v: string): string | null | false {
   return Number.isInteger(n) && n >= 1 && n <= 99 ? `${n}%` : false;
 }
 
+// 추가 이미지: 최대 5장, 올바른 주소만, 같은 이미지는 한 번만. 문제가 있으면 false
+function cleanExtras(values: FormDataEntryValue[]): string[] | false {
+  const out: string[] = [];
+  for (const raw of values) {
+    const v = String(raw).trim();
+    if (!v) continue;
+    const c = cleanImage(v);
+    if (!c) return false;
+    if (!out.includes(c)) out.push(c);
+  }
+  return out.length > 5 ? false : out;
+}
+
+// 색상 옵션: "이름|#색상코드"를 최대 8개까지, 이름이 겹치면 하나만 둡니다. 형식이 맞지 않으면 null
+function parseColorInputs(values: FormDataEntryValue[]): string[] | null {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const parts = String(raw).split("|");
+    const name = (parts[0] ?? "").trim();
+    if (!name) continue;
+    if (parts.length > 2 || name.length > 20) return null;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    out.push(serializeColor({ name, hex: /^#[0-9a-fA-F]{6}$/.test(parts[1] ?? "") ? (parts[1] as string) : "#cccccc" }));
+  }
+  return out.length > MAX_COLORS ? null : out;
+}
+
 function readProduct(formData: FormData) {
   return {
     category: str(formData, "category"),
@@ -99,6 +130,8 @@ function readProduct(formData: FormData) {
     inBest: formData.get("inBest") === "on", // BEST 카테고리에도 표시
     inNew: formData.get("inNew") === "on", // NEW 카테고리에도 표시
     soldOut: formData.get("soldOut") === "on", // 품절 표시
+    extra: cleanExtras(formData.getAll("extraImages")),
+    colors: parseColorInputs(formData.getAll("colors")),
   };
 }
 
@@ -109,6 +142,8 @@ function checkProduct(d: ReturnType<typeof readProduct>): string | null {
   if (!Number.isInteger(d.price) || d.price < 0) return "가격은 0 이상의 숫자(원 단위)로 입력해 주세요.";
   if (d.image === false) return IMG_ERR;
   if (d.sale === false) return "할인율은 1~99 사이의 숫자로 입력해 주세요.";
+  if (d.extra === false) return "추가 이미지는 올바른 이미지만 최대 5장까지 넣을 수 있어요.";
+  if (d.colors === null) return `색상은 이름 20자 이하로 최대 ${MAX_COLORS}개까지 등록할 수 있어요.`;
   return null;
 }
 
@@ -157,6 +192,8 @@ export async function createProduct(_prev: ProductState, formData: FormData): Pr
         inBest: d.inBest,
         inNew: d.inNew,
         soldOut: d.soldOut,
+        extraImages: d.extra as string[],
+        colors: d.colors as string[],
         stocks: { create: SIZES.filter((s) => st.stock[s] !== null).map((s) => ({ size: s, quantity: st.stock[s] as number })) },
       },
     });
@@ -177,14 +214,15 @@ export async function updateProduct(_prev: ProductState, formData: FormData): Pr
   const st = readStock(formData);
   if (st.error) return { error: st.error };
 
-  let oldImage: string | null | undefined;
+  let oldImages: (string | null | undefined)[] = [];
   try {
     const position = Number(d.positionRaw || 0);
     await prisma.$transaction(async (tx) => {
-      oldImage = (await tx.product.findUnique({ where: { id }, select: { imageUrl: true } }))?.imageUrl;
+      const prev = await tx.product.findUnique({ where: { id }, select: { imageUrl: true, extraImages: true } });
+      oldImages = [prev?.imageUrl, ...(prev?.extraImages ?? [])];
       await tx.product.update({
         where: { id },
-        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale as string | null, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description, subCategory: d.subCategory, inBest: d.inBest, inNew: d.inNew, soldOut: d.soldOut },
+        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale as string | null, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description, subCategory: d.subCategory, inBest: d.inBest, inNew: d.inNew, soldOut: d.soldOut, extraImages: d.extra as string[], colors: d.colors as string[] },
       });
       for (const size of SIZES) {
         const quantity = st.stock[size];
@@ -196,9 +234,10 @@ export async function updateProduct(_prev: ProductState, formData: FormData): Pr
     console.error("상품 수정 실패:", e);
     return { error: isDuplicate(e) ? DUP : "저장 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." };
   }
-  // 이미지를 다른 것으로 바꿨다면, 더 이상 쓰지 않는 이전 이미지는 DB에서 지웁니다.
-  const oldId = internalId(oldImage);
-  if (oldId && oldId !== internalId(d.image as string | null)) await prisma.productImage.deleteMany({ where: { id: oldId } });
+  // 더 이상 쓰지 않는 이전 이미지(대표·추가)는 DB에서 지웁니다.
+  const keep = new Set(internalIds([d.image as string | null, ...(d.extra as string[])]));
+  const drop = internalIds(oldImages).filter((x) => !keep.has(x));
+  if (drop.length > 0) await prisma.productImage.deleteMany({ where: { id: { in: drop } } });
   redirect("/admin/products?saved=1");
 }
 
@@ -208,10 +247,10 @@ export async function deleteProduct(formData: FormData) {
   await requireAdmin();
   const id = Number(str(formData, "id"));
   if (Number.isInteger(id)) {
-    const product = await prisma.product.findUnique({ where: { id }, select: { imageUrl: true } });
+    const product = await prisma.product.findUnique({ where: { id }, select: { imageUrl: true, extraImages: true } });
     await prisma.product.deleteMany({ where: { id } });
-    const imageId = internalId(product?.imageUrl);
-    if (imageId) await prisma.productImage.deleteMany({ where: { id: imageId } });
+    const imageIds = internalIds([product?.imageUrl, ...(product?.extraImages ?? [])]);
+    if (imageIds.length > 0) await prisma.productImage.deleteMany({ where: { id: { in: imageIds } } });
   }
   back();
 }
@@ -219,10 +258,10 @@ export async function deleteProduct(formData: FormData) {
 // 없어진 카테고리(예: men)에 남아 있는 상품을 한꺼번에 삭제합니다.
 export async function deleteRemovedCategoryProducts() {
   await requireAdmin();
-  const gone = await prisma.product.findMany({ where: { category: { notIn: Object.keys(lists) } }, select: { id: true, imageUrl: true } });
+  const gone = await prisma.product.findMany({ where: { category: { notIn: Object.keys(lists) } }, select: { id: true, imageUrl: true, extraImages: true } });
   if (gone.length > 0) {
     await prisma.product.deleteMany({ where: { id: { in: gone.map((p) => p.id) } } });
-    const imageIds = gone.map((p) => internalId(p.imageUrl)).filter((x): x is string => Boolean(x));
+    const imageIds = internalIds(gone.flatMap((p) => [p.imageUrl, ...p.extraImages]));
     if (imageIds.length > 0) await prisma.productImage.deleteMany({ where: { id: { in: imageIds } } });
   }
   back();

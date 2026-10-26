@@ -3,8 +3,10 @@ import LoginForm from "@/components/LoginForm";
 
 export const metadata = { title: "로그인" };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
+export default async function Page({ searchParams }: { searchParams: Promise<{ next?: string; kakao?: string }> }) {
+  const { next, kakao } = await searchParams;
+  const kakaoHref = `/api/auth/kakao${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+  const kakaoMessage = kakao === "off" ? "카카오 로그인이 아직 설정되지 않았어요." : kakao === "fail" ? "카카오 로그인에 실패했어요. 다시 시도해 주세요." : null;
   return (
     <section style={{ maxWidth: 440, margin: "0 auto", padding: "72px 24px 0" }}>
       <h1 style={{ margin: 0, textAlign: "center", font: "800 30px Archivo,sans-serif", letterSpacing: ".06em" }}>LOGIN</h1>
@@ -18,8 +20,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         </p>
       )}
       <LoginForm next={next} />
-      <a className="btn" href="#" style={{ marginTop: 10, background: "#fee500", fontFamily: "'Noto Sans KR',sans-serif", letterSpacing: 0 }}>
-        카카오로 3초 가입 · 5% 쿠폰
+      {kakaoMessage && <p role="alert" style={{ margin: "14px 0 0", fontSize: 13, color: "#c0392b" }}>{kakaoMessage}</p>}
+      <a className="btn" href={kakaoHref} style={{ marginTop: 10, background: "#fee500", color: "#111", fontFamily: "'Noto Sans KR',sans-serif", letterSpacing: 0 }}>
+        카카오로 시작하기
       </a>
       <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 28, fontSize: 13 }}>
         <Link href="/find-id" style={{ color: "#555" }}>아이디 찾기</Link>

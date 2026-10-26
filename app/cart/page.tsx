@@ -46,7 +46,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
               <div>
                 <div style={{ font: "400 12px Archivo,sans-serif", color: "#767676" }}>[브랜드명]</div>
                 <Link href={`/product/${i.productId}`} style={{ display: "block", marginTop: 4, font: "500 15px/1.4 'Noto Sans KR',sans-serif" }}>{i.product.name}</Link>
-                <div style={{ marginTop: 6, fontSize: 13, color: "#767676" }}>SIZE {i.size}</div>
+                <div style={{ marginTop: 6, fontSize: 13, color: "#767676" }}>{i.color ? `COLOR ${i.color} / ` : ""}SIZE {i.size}</div>
                 {problem(i) && <div role="alert" style={{ marginTop: 6, fontSize: 12, color: "#c0392b" }}>{problem(i)}</div>}
                 <form action={changeCartQty} style={{ display: "inline-flex", alignItems: "center", marginTop: 12, border: "1px solid #ccc" }}>
                   <input type="hidden" name="id" value={i.id} />

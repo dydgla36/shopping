@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { SIZES } from "@/lib/checkout";
+import { pickColor } from "@/lib/colors";
 import { availableFor } from "@/lib/stock";
 
 const MAX_QTY = 10;
@@ -14,41 +15,48 @@ const toProduct = (id: number, error: string) => redirect(`/product/${id}?error=
 // 상품 상세의 ADD TO CART: 로그인한 회원의 장바구니에 담고 장바구니 화면으로 이동합니다.
 export async function addToCart(formData: FormData) {
   const id = Number(formData.get("product"));
-  if (!Number.isInteger(id)) redirect("/");
+  if (!Number.isInteger(id)) return redirect("/");
   const user = await requireUser(`/product/${id}`); // 로그인하지 않았으면 로그인 후 이 상품 화면으로 돌아옵니다.
-  const product = await prisma.product.findUnique({ where: { id }, select: { id: true } });
-  if (!product) redirect("/");
+  const product = await prisma.product.findUnique({ where: { id }, select: { id: true, colors: true } });
+  if (!product) return redirect("/");
 
+  // 색상 옵션이 있는 상품은 그중 하나를 골라야 합니다.
+  const color = pickColor(product.colors, String(formData.get("color") ?? ""));
+  if (color === null) return toProduct(id, "색상을 선택해 주세요.");
   const size = readSize(formData.get("size"));
   const qty = readQty(formData.get("qty"));
   const available = await availableFor(id, size); // undefined = 재고를 관리하지 않음(무제한)
-  if (available === 0) toProduct(id, `${size} 사이즈는 품절이에요.`);
+  if (available === 0) return toProduct(id, `${size} 사이즈는 품절이에요.`);
 
   const cap = Math.min(MAX_QTY, available ?? MAX_QTY);
-  const key = { userId_productId_size: { userId: user.id, productId: id, size } };
+  const key = { userId_productId_size_color: { userId: user.id, productId: id, size, color } };
   const existing = await prisma.cartItem.findUnique({ where: key });
   const wanted = (existing?.quantity ?? 0) + qty;
   const finalQty = Math.min(cap, wanted);
   await prisma.cartItem.upsert({
     where: key,
-    create: { userId: user.id, productId: id, size, quantity: finalQty },
+    create: { userId: user.id, productId: id, size, color, quantity: finalQty },
     update: { quantity: finalQty },
   });
   // 재고나 한 줄 최대 수량(10개)을 넘으면 가능한 만큼만 담고 안내합니다.
-  if (wanted > cap) redirect(`/cart?notice=${encodeURIComponent(`${size} 사이즈는 ${cap}개까지만 담을 수 있어서 ${cap}개로 맞췄어요.`)}`);
-  redirect("/cart");
+  if (wanted > cap) return redirect(`/cart?notice=${encodeURIComponent(`${size} 사이즈는 ${cap}개까지만 담을 수 있어서 ${cap}개로 맞췄어요.`)}`);
+  return redirect("/cart");
 }
 
 // 상품 상세의 BUY NOW: 선택한 사이즈·수량으로 바로 주문/결제 화면으로 이동합니다.
 export async function buyNow(formData: FormData) {
   const id = Number(formData.get("product"));
-  if (!Number.isInteger(id)) redirect("/");
+  if (!Number.isInteger(id)) return redirect("/");
+  const product = await prisma.product.findUnique({ where: { id }, select: { colors: true } });
+  if (!product) return redirect("/");
+  const color = pickColor(product.colors, String(formData.get("color") ?? ""));
+  if (color === null) return toProduct(id, "색상을 선택해 주세요.");
   const size = readSize(formData.get("size"));
   const qty = readQty(formData.get("qty"));
   const available = await availableFor(id, size);
-  if (available === 0) toProduct(id, `${size} 사이즈는 품절이에요.`);
-  if (available !== undefined && qty > available) toProduct(id, `${size} 사이즈는 ${available}개만 남았어요. 수량을 줄여 주세요.`);
-  redirect(`/checkout?product=${id}&size=${encodeURIComponent(size)}&qty=${qty}`);
+  if (available === 0) return toProduct(id, `${size} 사이즈는 품절이에요.`);
+  if (available !== undefined && qty > available) return toProduct(id, `${size} 사이즈는 ${available}개만 남았어요. 수량을 줄여 주세요.`);
+  return redirect(`/checkout?product=${id}&size=${encodeURIComponent(size)}&qty=${qty}&color=${encodeURIComponent(color)}`);
 }
 
 // 장바구니 화면의 수량 −/+ 버튼

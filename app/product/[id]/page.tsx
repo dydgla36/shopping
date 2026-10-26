@@ -2,6 +2,8 @@ import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
+import ProductGallery from "@/components/ProductGallery";
+import { parseColors } from "@/lib/colors";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { SIZES } from "@/lib/checkout";
@@ -54,6 +56,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   ]);
   const soldOut = product.soldOut || soldOutOf(stock);
   const pv = priceView(product.price, product.sale);
+  const colorOptions = parseColors(product.colors);
   const firstAvailable = ["M", ...SIZES].find((s) => stock[s] !== 0) ?? "M"; // 품절이 아닌 사이즈를 기본 선택
 
   return (
@@ -62,15 +65,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <Link href="/" style={{ color: "#767676" }}>HOME</Link> &gt; <Link href={`/list/${product.category}`} style={{ color: "#767676" }}>{product.category.toUpperCase()}</Link> &gt; {product.name}
       </div>
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 56, padding: "28px 60px 0" }}>
-        <div style={{ aspectRatio: "4/5", background: product.bg, position: "relative", overflow: "hidden" }}>
-          {product.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrl} alt={product.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          )}
-          {soldOut && (
-            <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "12px 0", textAlign: "center", background: "rgba(17,17,17,.85)", color: "#fff", font: "700 13px Archivo,sans-serif", letterSpacing: ".12em" }}>SOLD OUT</span>
-          )}
-        </div>
+        <ProductGallery images={[product.imageUrl, ...product.extraImages].filter((u): u is string => Boolean(u))} bg={product.bg} name={product.name} soldOut={soldOut} />
 
         <form action={addToCart} style={{ maxWidth: 520 }}>
           <input type="hidden" name="product" value={product.id} />
@@ -93,6 +88,22 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           {error && <div role="alert" style={{ margin: "18px 0 0", padding: "12px 16px", fontSize: 13, background: "#fbeeee", color: "#c0392b" }}>{error}</div>}
           <div style={{ marginTop: 24, borderTop: "1px solid #e5e5e5" }} />
 
+          {colorOptions.length > 0 && (
+            <>
+              <div style={label}>COLOR</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {colorOptions.map((c, i) => (
+                  <span key={c.name}>
+                    <input className="opt" type="radio" name="color" id={`color-${i}`} value={c.name} defaultChecked={i === 0} />
+                    <label htmlFor={`color-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: "50%", background: c.hex, border: "1px solid #bbb" }} />
+                      {c.name}
+                    </label>
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
           <div style={label}>SIZE</div>
           <div>
             {SIZES.map((s) => {

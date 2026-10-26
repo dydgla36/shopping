@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { safeNext } from "@/lib/redirect";
 import { formatPhone, phoneOk } from "@/lib/validate";
 import { clearLimit, clientIp, lockedSeconds, recordFailure } from "@/lib/rateLimit";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
@@ -10,7 +11,6 @@ export type FormState = { error?: string } | undefined;
 
 const str = (formData: FormData, key: string) => String(formData.get(key) ?? "").trim();
 // 로그인 후 돌아갈 주소는 이 사이트 안의 주소만 허용합니다.
-const safeNext = (n: string) => (n.startsWith("/") && !n.startsWith("//") ? n : "/");
 const NO_DB = "아직 데이터베이스가 연결되지 않았어요. README의 'DB 연결'을 먼저 진행해 주세요.";
 
 export async function signup(_prev: FormState, formData: FormData): Promise<FormState> {

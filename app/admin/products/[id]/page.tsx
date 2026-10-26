@@ -25,7 +25,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       </p>
       <ProductForm
         categories={Object.keys(lists)}
-        product={{ id: product.id, category: product.category, name: product.name, price: product.price, sale: product.sale, position: product.position, bg: product.bg, imageUrl: product.imageUrl, description: product.description, subCategory: product.subCategory, inBest: product.inBest || product.category === "best", inNew: product.inNew || product.category === "new", soldOut: product.soldOut, stock }}
+        product={{ id: product.id, category: product.category, name: product.name, price: product.price, sale: product.sale, position: product.position, bg: product.bg, imageUrl: product.imageUrl, description: product.description, subCategory: product.subCategory, inBest: product.inBest || product.category === "best", inNew: product.inNew || product.category === "new", soldOut: product.soldOut, extraImages: product.extraImages, colors: product.colors, stock }}
       />
     </>
   );
