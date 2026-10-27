@@ -35,7 +35,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
 
   let userId: number;
   try {
-    const exists = await prisma.user.findFirst({ where: { OR: [{ loginId }, { email }] } });
+    const exists = await prisma.user.findFirst({ where: { OR: [{ loginId }, { email }] }, select: { id: true } });
     if (exists) return { error: "이미 사용 중인 아이디 또는 이메일이에요." };
     const user = await prisma.user.create({
       data: {
@@ -47,6 +47,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
         marketingOptIn: formData.get("marketing") === "on",
         termsAgreedAt: new Date(),
       },
+      select: { id: true },
     });
     userId = user.id;
     await createSession(userId, 1);
@@ -75,7 +76,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
 
   let isAdmin = false;
   try {
-    const user = await prisma.user.findUnique({ where: { loginId } });
+    const user = await prisma.user.findUnique({ where: { loginId }, select: { id: true, passwordHash: true, role: true } });
     // 아이디가 없어도 같은 시간이 걸리도록 해시 계산을 한 번 합니다.
     const ok = user ? verifyPassword(password, user.passwordHash) : (hashPassword(password), false);
     if (!user || !ok) {

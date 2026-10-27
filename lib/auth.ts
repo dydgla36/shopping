@@ -41,7 +41,11 @@ export const getCurrentUser = cache(async () => {
   const id = (await cookies()).get(COOKIE)?.value;
   if (!id) return null;
   try {
-    const session = await prisma.session.findUnique({ where: { id }, include: { user: true } });
+    // 필요한 컬럼만 읽습니다. (새 기능 때문에 회원 테이블에 컬럼이 늘어도 로그인이 막히지 않게)
+    const session = await prisma.session.findUnique({
+      where: { id },
+      select: { expiresAt: true, user: { select: { id: true, name: true, loginId: true, email: true, phone: true, role: true } } },
+    });
     if (!session || session.expiresAt < new Date()) return null;
     return {
       id: session.user.id,
