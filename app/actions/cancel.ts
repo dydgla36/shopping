@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { cancelOrderTx } from "@/lib/orderOps";
 import { notifyAdminCanceled, notifyOrder } from "@/lib/notify";
+import { sendRestockAlerts } from "@/lib/restock";
 import { tokenOk } from "@/lib/guest";
 import { clientIp, hit } from "@/lib/rateLimit";
 import type { ActionState } from "@/components/ActionForm";
@@ -45,6 +46,7 @@ async function announce(order: Canceled, reason: string) {
     reason,
     items: order.items.map((i) => ({ name: i.name, quantity: i.quantity, size: i.size })),
   });
+  await sendRestockAlerts(order.items.map((i) => i.productId));
   await notifyAdminCanceled({ orderNumber: order.orderNumber, ordererName: order.ordererName, total: order.total, reason });
 }
 

@@ -18,13 +18,14 @@ export default async function Page() {
     prisma.order.count(),
     prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: "CANCELED" } } }),
     prisma.order.count({ where: { status: { in: ["PENDING", "PAID", "PREPARING"] } } }),
-    prisma.user.count({ where: { role: "USER" } }),
+    prisma.user.count({ where: { role: "USER", deletedAt: null } }),
     prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 5, include: { items: true } }),
     // 품절이거나 재고가 3개 이하인 사이즈 수 (재고 테이블이 아직 없으면 0)
     prisma.productStock.count({ where: { quantity: { lte: 3 } } }).catch(() => 0),
     prisma.question.count({ where: { answer: null } }).catch(() => 0),
     prisma.claim.count({ where: { status: { in: ["RECEIVED", "PROCESSING"] } } }).catch(() => 0),
     prisma.order.count({ where: { status: "CANCELED", canceledAt: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } } }),
+    prisma.errorLog.count({ where: { lastAt: { gte: new Date(Date.now() - 24 * 3600 * 1000) } } }).catch(() => 0),
   ]);
   } catch (e) {
     // 새 기능에 필요한 컬럼·테이블이 아직 DB에 없을 때: 대시보드가 멈추지 않고 DB 설정 안내를 보여줍니다.
@@ -39,7 +40,7 @@ export default async function Page() {
       </>
     );
   }
-  const [today, total, sum, waiting, members, recent, lowStock, openQna, openClaims, canceledRecent] = loaded;
+  const [today, total, sum, waiting, members, recent, lowStock, openQna, openClaims, canceledRecent, recentErrors] = loaded;
   const cols = "100px 150px 1fr 110px 90px";
 
   return (
@@ -52,6 +53,7 @@ export default async function Page() {
         <div style={card}><div style={cardLabel}>회원 수</div><div style={cardValue}>{members}</div></div>
         <Link href="/admin/qna?status=waiting" style={{ ...card, display: "block" }}><div style={cardLabel}>답변 대기 문의</div><div style={{ ...cardValue, color: openQna > 0 ? "#c0392b" : undefined }}>{openQna}</div></Link>
         <Link href="/admin/orders?status=CANCELED" style={{ ...card, display: "block" }}><div style={cardLabel}>최근 7일 취소 주문</div><div style={{ ...cardValue, color: canceledRecent > 0 ? "#c0392b" : undefined }}>{canceledRecent}</div></Link>
+        <Link href="/admin/errors" style={{ ...card, display: "block" }}><div style={cardLabel}>최근 24시간 오류</div><div style={{ ...cardValue, color: recentErrors > 0 ? "#c0392b" : undefined }}>{recentErrors}</div></Link>
         <Link href="/admin/claims" style={{ ...card, display: "block" }}><div style={cardLabel}>처리 대기 취소·반품·교환</div><div style={{ ...cardValue, color: openClaims > 0 ? "#c0392b" : undefined }}>{openClaims}</div></Link>
         <Link href="/admin/products" style={{ ...card, display: "block" }}><div style={cardLabel}>품절·재고 부족 (3개 이하)</div><div style={{ ...cardValue, color: lowStock > 0 ? "#c0392b" : undefined }}>{lowStock}</div></Link>
         <div style={{ ...card, flexBasis: 260 }}><div style={cardLabel}>주문 금액 합계 (취소 제외)</div><div style={cardValue}>{won(sum._sum.total ?? 0)}</div></div>

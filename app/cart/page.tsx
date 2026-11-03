@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { changeCartQty, removeFromCart } from "@/app/actions/cart";
-import { DISCOUNT, SHIPPING_FEE, unitPrice, won } from "@/lib/orders";
+import { DISCOUNT, FREE_SHIPPING_MIN, shippingFeeFor, unitPrice, untilFreeShipping, won } from "@/lib/orders";
 import { groupStock } from "@/lib/stock";
 
 export const metadata = { title: "장바구니" };
@@ -70,10 +70,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         <div style={{ background: "#f4f2ee", padding: 32, maxWidth: 460 }}>
           <div style={{ font: "800 16px Archivo,sans-serif", letterSpacing: ".08em" }}>ORDER SUMMARY</div>
           <div style={row}><span>상품금액</span><span style={{ fontFamily: "Archivo,sans-serif" }}>{won(itemsTotal)}</span></div>
-          <div style={row}><span>배송비</span><span style={{ fontFamily: "Archivo,sans-serif" }}>{won(SHIPPING_FEE)}</span></div>
+          <div style={row}><span>배송비</span><span style={{ fontFamily: "Archivo,sans-serif" }}>{won(shippingFeeFor(itemsTotal))}</span></div>
+          {untilFreeShipping(itemsTotal) > 0 && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "#c0392b" }}>{won(untilFreeShipping(itemsTotal))} 더 담으면 배송비 무료예요 ({won(FREE_SHIPPING_MIN)} 이상)</div>
+          )}
           <div style={row}><span>할인 금액</span><span style={{ fontFamily: "Archivo,sans-serif" }}>{won(DISCOUNT)}</span></div>
           <div style={{ marginTop: 22, paddingTop: 20, borderTop: "1px solid #111" }}>
-            <div style={{ ...row, marginTop: 0, fontWeight: 700 }}><span>총 결제 예정금액</span><span style={{ fontFamily: "Archivo,sans-serif" }}>{won(itemsTotal + SHIPPING_FEE - DISCOUNT)}</span></div>
+            <div style={{ ...row, marginTop: 0, fontWeight: 700 }}><span>총 결제 예정금액</span><span style={{ fontFamily: "Archivo,sans-serif" }}>{won(itemsTotal + shippingFeeFor(itemsTotal) - DISCOUNT)}</span></div>
           </div>
           {items.length > 0 && !blocked ? (
             <Link className="btn" href="/checkout?cart=1" style={{ marginTop: 28, background: "#111", color: "#fff" }}>ORDER</Link>

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import ActionForm from "@/components/ActionForm";
+import ReviewForm from "@/components/ReviewForm";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { createReview } from "@/app/actions/review";
+import { PHOTO_REVIEW_POINT, REVIEW_POINT, REVIEW_POINT_MIN_LENGTH, won } from "@/lib/orders";
 import { crumb, narrow, narrowTitle } from "@/lib/ui";
 
 export const metadata = { title: "후기 작성" };
@@ -27,19 +27,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
         {options.length === 0 ? (
           <p style={{ marginTop: 32, textAlign: "center", fontSize: 14, lineHeight: 1.8, color: "#555" }}>후기를 쓸 수 있는 구매 상품이 없어요.<br />구매한 상품은 상품당 후기를 한 번 쓸 수 있어요.</p>
         ) : (
-          <ActionForm action={createReview} submitLabel="SUBMIT">
-            <label className="fld">상품
-              <select name="product" defaultValue={options.find((o) => String(o.productId) === product)?.productId ?? options[0].productId ?? ""}>
-                {options.map((o) => <option key={o.productId} value={o.productId ?? ""}>{o.name}</option>)}
-              </select>
-            </label>
-            <label className="fld">별점
-              <select name="rating" defaultValue="5">
-                {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{"★".repeat(n)}{"☆".repeat(5 - n)} ({n}점)</option>)}
-              </select>
-            </label>
-            <label className="fld">후기<textarea name="content" rows={7} maxLength={1000} placeholder="상품에 대한 후기를 5자 이상 남겨 주세요" required /></label>
-          </ActionForm>
+          <>
+            <p style={{ margin: "20px 0 0", padding: "12px 16px", background: "#f4f2ee", fontSize: 13, lineHeight: 1.7, color: "#444" }}>
+              {REVIEW_POINT_MIN_LENGTH}자 이상 후기를 쓰면 적립금 {won(REVIEW_POINT)}, 사진을 함께 붙이면 {won(PHOTO_REVIEW_POINT)}이 적립돼요.
+            </p>
+            <ReviewForm options={options.map((o) => ({ productId: o.productId as number, name: o.name }))} defaultProduct={Number(options.find((o) => String(o.productId) === product)?.productId ?? options[0]?.productId)} />
+          </>
         )}
       </section>
     </>

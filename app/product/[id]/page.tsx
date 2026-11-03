@@ -2,13 +2,15 @@ import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
+import ActionForm from "@/components/ActionForm";
 import ProductGallery from "@/components/ProductGallery";
+import { requestRestock } from "@/app/actions/restock";
+import ReviewPhotos from "@/components/ReviewPhotos";
 import { parseColors } from "@/lib/colors";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { SIZES } from "@/lib/checkout";
 import { LOW_STOCK, soldOutOf, stockMap, type StockMap } from "@/lib/stock";
-import { priceView } from "@/lib/orders";
+import { FREE_SHIPPING_MIN, SHIPPING_FEE, priceView, won } from "@/lib/orders";
 import { addToCart, buyNow } from "@/app/actions/cart";
 import { toggleWishlist } from "@/app/actions/wishlist";
 import { maskName } from "@/lib/mask";
@@ -54,10 +56,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     prisma.review.findMany({ where: { productId: product.id }, orderBy: { createdAt: "desc" }, take: 5, include: { user: { select: { name: true } } } }).catch(() => []),
     prisma.review.aggregate({ where: { productId: product.id }, _avg: { rating: true }, _count: { _all: true } }).catch(() => null),
   ]);
-  const soldOut = product.soldOut || soldOutOf(stock);
+  const soldOut = product.soldOut || soldOutOf(stock, product.sizes);
   const pv = priceView(product.price, product.sale);
+  // 지금 살 수 없는 사이즈 (상품 전체가 품절이면 모든 사이즈)
+  const unavailableSizes = product.soldOut ? product.sizes : product.sizes.filter((s) => stock[s] === 0);
   const colorOptions = parseColors(product.colors);
-  const firstAvailable = ["M", ...SIZES].find((s) => stock[s] !== 0) ?? "M"; // 품절이 아닌 사이즈를 기본 선택
+  const firstAvailable = product.sizes.find((s) => stock[s] !== 0) ?? product.sizes[0]; // 품절이 아닌 사이즈를 기본 선택
 
   return (
     <>
@@ -106,7 +110,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           )}
           <div style={label}>SIZE</div>
           <div>
-            {SIZES.map((s) => {
+            {product.sizes.map((s) => {
               const q = stock[s];
               const text = q === 0 ? `${s} (품절)` : q !== undefined && q <= LOW_STOCK ? `${s} (${q}개 남음)` : s;
               return (
@@ -135,11 +139,32 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </button>
           {!user && <p style={{ margin: "10px 0 0", fontSize: 12, lineHeight: 1.7, color: "#767676" }}>비회원도 BUY NOW로 바로 주문할 수 있어요. 장바구니와 관심 상품은 로그인이 필요해요.</p>}
           <div style={{ marginTop: 36, fontSize: 13, lineHeight: 1.9, color: "#555", borderTop: "1px solid #e5e5e5", paddingTop: 20 }}>
-            <b style={{ color: "#111" }}>배송 안내</b> [배송비·배송 기간 안내]<br />
+            <b style={{ color: "#111" }}>배송 안내</b> {won(FREE_SHIPPING_MIN)} 이상 구매 시 무료배송 (미만 {won(SHIPPING_FEE)}) · [배송 기간 안내]<br />
             <b style={{ color: "#111" }}>교환·반품</b> [교환·반품 정책 안내]
           </div>
         </form>
       </section>
+
+      {unavailableSizes.length > 0 && (
+        <section style={{ padding: "28px 60px 0", maxWidth: 580 }}>
+          <div style={{ padding: 24, background: "#f4f2ee" }}>
+            <div style={{ font: "800 16px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".06em" }}>재입고 알림</div>
+            <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.7, color: "#555" }}>
+              {soldOut ? "지금은 품절이에요." : `${unavailableSizes.join(", ")} 사이즈는 품절이에요.`} 이메일을 남기면 다시 입고될 때 알려드려요.
+            </p>
+            <ActionForm action={requestRestock} submitLabel="재입고 알림 신청">
+              <input type="hidden" name="product" value={product.id} />
+              <label className="fld">사이즈
+                <select name="size" defaultValue={unavailableSizes.length === product.sizes.length ? "" : unavailableSizes[0]}>
+                  {unavailableSizes.length === product.sizes.length && <option value="">모든 사이즈</option>}
+                  {unavailableSizes.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </label>
+              <label className="fld">이메일<input name="email" type="email" defaultValue={user?.email ?? ""} placeholder="example@email.com" required /></label>
+            </ActionForm>
+          </div>
+        </section>
+      )}
 
       <section style={{ padding: "72px 60px 0", maxWidth: 960 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 12, paddingBottom: 14, borderBottom: "1px solid #111" }}>
@@ -151,6 +176,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <div key={r.id} style={{ padding: "20px 0", borderBottom: "1px solid #e5e5e5" }}>
             <div aria-label={`별점 ${r.rating}점`} style={{ font: "700 14px Archivo,sans-serif", letterSpacing: ".1em" }}>{stars(r.rating)}</div>
             <p style={{ margin: "10px 0 0", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-line" }}>{r.content}</p>
+            <ReviewPhotos photos={r.photos} size={72} />
             <div style={{ marginTop: 10, fontSize: 12, color: "#767676" }}>{maskName(r.user.name)} · {fmtDate(r.createdAt)}</div>
           </div>
         ))}

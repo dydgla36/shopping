@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { requireAdmin } from "@/lib/admin";
 import { cancelOrderTx } from "@/lib/orderOps";
+import { sendRestockAlerts } from "@/lib/restock";
 import { CLAIM_STATUS, CLAIM_TYPE } from "@/lib/orders";
 import type { ActionState } from "@/components/ActionForm";
 
@@ -39,11 +40,16 @@ export async function updateClaim(formData: FormData) {
   const adminNote = String(formData.get("adminNote") ?? "").trim().slice(0, 500) || null;
   if (!Number.isInteger(id) || !CLAIM_STATUS[status]) redirect(`/admin/claims?error=${encodeURIComponent("처리 상태가 올바르지 않아요.")}`);
 
+  let restockIds: (number | null)[] = [];
   await prisma.$transaction(async (tx) => {
     const claim = await tx.claim.findUnique({ where: { id } });
     if (!claim) return;
     await tx.claim.update({ where: { id }, data: { status, adminNote } });
-    if (status === "DONE" && claim.status !== "DONE" && (claim.type === "CANCEL" || claim.type === "RETURN")) await cancelOrderTx(tx, claim.orderId, { by: "CUSTOMER", reason: claim.reason });
+    if (status === "DONE" && claim.status !== "DONE" && (claim.type === "CANCEL" || claim.type === "RETURN")) {
+      await cancelOrderTx(tx, claim.orderId, { by: "CUSTOMER", reason: claim.reason });
+      restockIds = (await tx.orderItem.findMany({ where: { orderId: claim.orderId }, select: { productId: true } })).map((i) => i.productId);
+    }
   });
+  await sendRestockAlerts(restockIds); // 취소·반품으로 재고가 돌아왔다면 재입고 알림
   redirect("/admin/claims?saved=1");
 }

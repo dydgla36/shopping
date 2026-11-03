@@ -5,7 +5,7 @@ import { randomInt } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { formatPhone, phoneOk } from "@/lib/validate";
 import { getCurrentUser } from "@/lib/auth";
-import { SHIPPING_FEE } from "@/lib/orders";
+import { MAX_ADDRESSES, shippingFeeFor } from "@/lib/orders";
 import { resolveLines } from "@/lib/checkout";
 import { couponDiscount, couponUsable } from "@/lib/coupons";
 import { newGuestToken } from "@/lib/guest";
@@ -49,6 +49,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   const lines = await resolveLines({ product: s("productId") || undefined, size: s("size") || undefined, qty: s("qty") || undefined, color: s("color") || undefined, cart: fromCart, userId: user?.id });
   if (!lines) return { error: fromCart ? "장바구니가 비어 있어요." : "주문할 상품을 찾을 수 없어요." };
   const itemsTotal = lines.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const shippingFee = shippingFeeFor(itemsTotal); // 쿠폰·적립금과 상관없이 상품금액으로 정합니다.
   const userCouponId = user ? Number(s("userCouponId")) || 0 : 0; // 쿠폰·적립금은 회원만
   const wantPoints = user ? Math.max(0, Math.floor(Number(s("points"))) || 0) : 0;
 
@@ -99,11 +100,11 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
           status: "PENDING", // 실제 결제 연동이 없어서 '주문 접수' 상태로 저장합니다.
           paymentMethod,
           itemsTotal,
-          shippingFee: SHIPPING_FEE,
+          shippingFee,
           discount,
           pointsUsed,
           userCouponId: userCouponId || null,
-          total: itemsTotal + SHIPPING_FEE - discount,
+          total: itemsTotal + shippingFee - discount,
           ordererName,
           ordererPhone,
           ordererEmail,
@@ -128,6 +129,21 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
     if (e instanceof CheckoutError) return { error: e.message };
     console.error("주문 저장 실패:", e);
     return { error: "주문 저장 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." };
+  }
+
+  // "이 배송지를 저장해 두기"를 켠 회원은 배송지 목록에 저장합니다. (실패해도 주문에는 영향이 없습니다)
+  if (user && formData.get("saveAddress") === "on") {
+    try {
+      const [count, same] = await Promise.all([
+        prisma.address.count({ where: { userId: user.id } }),
+        prisma.address.findFirst({ where: { userId: user.id, recipientName, address, addressDetail: addressDetail || null }, select: { id: true } }),
+      ]);
+      if (!same && count < MAX_ADDRESSES) {
+        await prisma.address.create({ data: { userId: user.id, recipientName, recipientPhone, postcode: postcode || null, address, addressDetail: addressDetail || null, isDefault: count === 0 } });
+      }
+    } catch (e) {
+      console.error("배송지 저장 실패:", e);
+    }
   }
 
   // 주문 접수 알림 메일 (이메일 서비스가 설정되어 있을 때만, 실패해도 주문은 그대로 유지)

@@ -10,6 +10,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
   const q = ((await searchParams).q ?? "").trim();
   const where = {
     role: "USER",
+    deletedAt: null,
     ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { loginId: { contains: q, mode: "insensitive" as const } }, { email: { contains: q, mode: "insensitive" as const } }] } : {}),
   };
   const [members, total] = await Promise.all([

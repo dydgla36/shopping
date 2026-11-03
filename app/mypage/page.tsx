@@ -8,6 +8,7 @@ export const metadata = { title: "마이페이지" };
 const menu = [
   ["주문 내역", "/mypage"],
   ["취소 / 반품 / 교환", "/claims"],
+  ["배송지 관리", "/addresses"],
   ["관심 상품", "/wishlist"],
   ["적립금", "/points"],
   ["쿠폰", "/coupons"],

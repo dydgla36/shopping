@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Pager from "@/components/Pager";
+import ReviewPhotos from "@/components/ReviewPhotos";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { deleteReview } from "@/app/actions/adminContent";
@@ -29,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
             <div key={r.id} style={bodyRow(cols)}>
               <span style={{ font: "700 13px Archivo,sans-serif" }}>{stars(r.rating)}</span>
               <Link href={`/product/${r.product.id}`} style={{ fontSize: 13 }}>{r.product.name}</Link>
-              <span style={{ fontSize: 13, color: "#444", whiteSpace: "pre-line", wordBreak: "break-word" }}>{r.content}</span>
+              <span style={{ fontSize: 13, color: "#444", whiteSpace: "pre-line", wordBreak: "break-word" }}>{r.content}<ReviewPhotos photos={r.photos} size={56} /></span>
               <span style={{ fontSize: 12, color: "#767676" }}>{r.user.name}<br />{fmtDate(r.createdAt)}</span>
               <form action={deleteReview}><input type="hidden" name="id" value={r.id} /><button type="submit" style={{ ...btnLine, color: "#c0392b", borderColor: "#c0392b" }}>DEL</button></form>
             </div>

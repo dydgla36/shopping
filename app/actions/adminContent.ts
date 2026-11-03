@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { isDuplicate } from "@/lib/errors";
+import { REVIEW_REASON } from "@/lib/orders";
 import type { ActionState } from "@/components/ActionForm";
 
 // 관리자 전용 동작 모음 (공지, 문의 답변, 후기 삭제). 모든 동작은 맨 처음에 관리자인지 확인합니다.
 const num = (f: FormData, k: string) => Number(f.get(k));
+const PHOTO_ID = /^\/api\/product-image\/([A-Za-z0-9_-]{10,40})$/;
 
 export async function saveNotice(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin("/admin/notices");
@@ -55,7 +57,19 @@ export async function deleteQuestion(formData: FormData) {
 export async function deleteReview(formData: FormData) {
   await requireAdmin();
   const id = num(formData, "id");
-  if (Number.isInteger(id)) await prisma.review.deleteMany({ where: { id } });
+  if (Number.isInteger(id)) {
+    await prisma.$transaction(async (tx) => {
+      const review = await tx.review.findUnique({ where: { id }, select: { userId: true, photos: true } });
+      if (!review) return;
+      // 후기로 받은 적립금은 회수하고, 후기 사진은 DB에서 지웁니다.
+      const earned = await tx.pointLog.aggregate({ where: { userId: review.userId, reason: `${REVIEW_REASON} (후기 #${id})` }, _sum: { amount: true } });
+      const amount = earned._sum.amount ?? 0;
+      if (amount > 0) await tx.pointLog.create({ data: { userId: review.userId, amount: -amount, reason: `후기 삭제로 적립금 회수 (후기 #${id})` } });
+      const photoIds = review.photos.map((u) => PHOTO_ID.exec(u)?.[1]).filter((x): x is string => Boolean(x));
+      if (photoIds.length > 0) await tx.productImage.deleteMany({ where: { id: { in: photoIds } } });
+      await tx.review.delete({ where: { id } });
+    });
+  }
   redirect("/admin/reviews");
 }
 
@@ -99,4 +113,17 @@ export async function deleteCoupon(formData: FormData) {
   const id = num(formData, "id");
   if (Number.isInteger(id)) await prisma.coupon.deleteMany({ where: { id } });
   redirect("/admin/coupons");
+}
+
+export async function deleteError(formData: FormData) {
+  await requireAdmin();
+  const id = num(formData, "id");
+  if (Number.isInteger(id)) await prisma.errorLog.deleteMany({ where: { id } });
+  redirect("/admin/errors");
+}
+
+export async function clearErrors() {
+  await requireAdmin();
+  await prisma.errorLog.deleteMany({});
+  redirect("/admin/errors");
 }

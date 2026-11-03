@@ -4,14 +4,15 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { requireAdmin } from "@/lib/admin";
-import { SIZES } from "@/lib/checkout";
 import { STATUS_LABEL } from "@/lib/orders";
 import { lists } from "@/lib/lists";
 import { SUB_CATEGORIES } from "@/lib/categories";
 import { isDuplicate } from "@/lib/errors";
 import { MAX_COLORS, serializeColor } from "@/lib/colors";
+import { cleanSizes } from "@/lib/sizes";
 import { cancelOrderTx, earnPointsTx } from "@/lib/orderOps";
 import { notifyOrder } from "@/lib/notify";
+import { sendRestockAlerts } from "@/lib/restock";
 
 // 서버 액션은 누구나 직접 호출할 수 있는 주소이므로, 모든 동작의 맨 처음에 관리자인지 확인합니다.
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -53,6 +54,7 @@ export async function updateOrder(formData: FormData) {
     : status === "SHIPPING" && (o.status !== "SHIPPING" || (trackingNumber && trackingNumber !== o.trackingNumber)) ? "shipping"
     : null;
   if (kind) await notifyOrder(kind, { ...o, carrier, trackingNumber });
+  if (kind === "canceled") await sendRestockAlerts(o.items.map((i) => i.productId)); // 취소로 재고가 돌아왔다면 재입고 알림
   redirect(`${to}?saved=1`);
 }
 
@@ -131,6 +133,7 @@ function readProduct(formData: FormData) {
     inNew: formData.get("inNew") === "on", // NEW 카테고리에도 표시
     soldOut: formData.get("soldOut") === "on", // 품절 표시
     extra: cleanExtras(formData.getAll("extraImages")),
+    sizes: cleanSizes(formData.getAll("sizes").map(String)),
     colors: parseColorInputs(formData.getAll("colors")),
   };
 }
@@ -143,15 +146,16 @@ function checkProduct(d: ReturnType<typeof readProduct>): string | null {
   if (d.image === false) return IMG_ERR;
   if (d.sale === false) return "할인율은 1~99 사이의 숫자로 입력해 주세요.";
   if (d.extra === false) return "추가 이미지는 올바른 이미지만 최대 5장까지 넣을 수 있어요.";
+  if (d.sizes === null) return "사이즈를 1개 이상 10개 이하(한 개당 10자 이하)로 정해 주세요.";
   if (d.colors === null) return `색상은 이름 20자 이하로 최대 ${MAX_COLORS}개까지 등록할 수 있어요.`;
   return null;
 }
 
 // 사이즈별 재고. 비우면 null(재고를 관리하지 않음 = 무제한), 숫자(0 포함)면 그 수량입니다.
-function readStock(formData: FormData): { stock: Record<string, number | null>; error?: string } {
+function readStock(formData: FormData, sizes: string[]): { stock: Record<string, number | null>; error?: string } {
   const stock: Record<string, number | null> = {};
-  for (const size of SIZES) {
-    const raw = str(formData, `stock${size}`);
+  for (const size of sizes) {
+    const raw = str(formData, `stock:${size}`);
     if (!raw) {
       stock[size] = null;
       continue;
@@ -168,7 +172,8 @@ export async function createProduct(_prev: ProductState, formData: FormData): Pr
   const d = readProduct(formData);
   const problem = checkProduct(d);
   if (problem) return { error: problem };
-  const st = readStock(formData);
+  const sizes = d.sizes as string[];
+  const st = readStock(formData, sizes);
   if (st.error) return { error: st.error };
 
   try {
@@ -194,7 +199,8 @@ export async function createProduct(_prev: ProductState, formData: FormData): Pr
         soldOut: d.soldOut,
         extraImages: d.extra as string[],
         colors: d.colors as string[],
-        stocks: { create: SIZES.filter((s) => st.stock[s] !== null).map((s) => ({ size: s, quantity: st.stock[s] as number })) },
+        sizes,
+        stocks: { create: sizes.filter((s) => st.stock[s] !== null).map((s) => ({ size: s, quantity: st.stock[s] as number })) },
       },
     });
   } catch (e) {
@@ -211,7 +217,8 @@ export async function updateProduct(_prev: ProductState, formData: FormData): Pr
   const d = readProduct(formData);
   const problem = checkProduct(d);
   if (problem) return { error: problem };
-  const st = readStock(formData);
+  const sizes = d.sizes as string[];
+  const st = readStock(formData, sizes);
   if (st.error) return { error: st.error };
 
   let oldImages: (string | null | undefined)[] = [];
@@ -222,9 +229,11 @@ export async function updateProduct(_prev: ProductState, formData: FormData): Pr
       oldImages = [prev?.imageUrl, ...(prev?.extraImages ?? [])];
       await tx.product.update({
         where: { id },
-        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale as string | null, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description, subCategory: d.subCategory, inBest: d.inBest, inNew: d.inNew, soldOut: d.soldOut, extraImages: d.extra as string[], colors: d.colors as string[] },
+        data: { category: d.category, name: d.name, price: d.price, bg: d.bg, sale: d.sale as string | null, position: Number.isInteger(position) ? position : 0, imageUrl: d.image as string | null, description: d.description, subCategory: d.subCategory, inBest: d.inBest, inNew: d.inNew, soldOut: d.soldOut, extraImages: d.extra as string[], colors: d.colors as string[], sizes },
       });
-      for (const size of SIZES) {
+      // 없어진 사이즈의 재고 기록은 지우고, 남은 사이즈는 입력한 대로 저장합니다.
+      await tx.productStock.deleteMany({ where: { productId: id, size: { notIn: sizes } } });
+      for (const size of sizes) {
         const quantity = st.stock[size];
         if (quantity === null) await tx.productStock.deleteMany({ where: { productId: id, size } });
         else await tx.productStock.upsert({ where: { productId_size: { productId: id, size } }, create: { productId: id, size, quantity }, update: { quantity } });
@@ -238,6 +247,7 @@ export async function updateProduct(_prev: ProductState, formData: FormData): Pr
   const keep = new Set(internalIds([d.image as string | null, ...(d.extra as string[])]));
   const drop = internalIds(oldImages).filter((x) => !keep.has(x));
   if (drop.length > 0) await prisma.productImage.deleteMany({ where: { id: { in: drop } } });
+  await sendRestockAlerts([id]); // 재고가 생겼다면 재입고 알림 신청자에게 메일
   redirect("/admin/products?saved=1");
 }
 
@@ -248,8 +258,9 @@ export async function deleteProduct(formData: FormData) {
   const id = Number(str(formData, "id"));
   if (Number.isInteger(id)) {
     const product = await prisma.product.findUnique({ where: { id }, select: { imageUrl: true, extraImages: true } });
+    const reviews = await prisma.review.findMany({ where: { productId: id }, select: { photos: true } }); // 상품과 함께 지워지는 후기의 사진
     await prisma.product.deleteMany({ where: { id } });
-    const imageIds = internalIds([product?.imageUrl, ...(product?.extraImages ?? [])]);
+    const imageIds = internalIds([product?.imageUrl, ...(product?.extraImages ?? []), ...reviews.flatMap((r) => r.photos)]);
     if (imageIds.length > 0) await prisma.productImage.deleteMany({ where: { id: { in: imageIds } } });
   }
   back();
@@ -274,6 +285,7 @@ export async function toggleSoldOut(formData: FormData) {
   if (Number.isInteger(id)) {
     const product = await prisma.product.findUnique({ where: { id }, select: { soldOut: true } });
     if (product) await prisma.product.update({ where: { id }, data: { soldOut: !product.soldOut } });
+    if (product?.soldOut) await sendRestockAlerts([id]); // 품절을 해제했다면 재입고 알림
   }
   back();
 }

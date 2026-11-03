@@ -24,7 +24,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
   const [orders, items, newMembers] = await Promise.all([
     prisma.order.findMany({ where: { createdAt: { gte: start } }, select: { createdAt: true, total: true, status: true, paymentMethod: true, userId: true }, take: 20000 }),
     prisma.orderItem.findMany({ where: { order: { createdAt: { gte: start }, status: { not: "CANCELED" } } }, select: { name: true, quantity: true, price: true }, take: 50000 }),
-    prisma.user.count({ where: { role: "USER", createdAt: { gte: start } } }),
+    prisma.user.count({ where: { role: "USER", deletedAt: null, createdAt: { gte: start } } }),
   ]);
 
   // 매출은 취소한 주문을 뺀 결제 금액의 합계입니다.

@@ -4,7 +4,6 @@ import { kstDateTime, toCsv } from "@/lib/csv";
 import { CLAIM_STATUS, STATUS_LABEL, saleRate, unitPrice } from "@/lib/orders";
 import { parseColors } from "@/lib/colors";
 import { groupStock } from "@/lib/stock";
-import { SIZES } from "@/lib/checkout";
 
 // 관리자 전용: 주문·회원·상품 목록을 CSV(엑셀)로 내려받습니다. (개인정보가 들어 있어요)
 const DAY = 24 * 3600 * 1000;
@@ -37,7 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
       ]),
     ];
   } else if (kind === "members") {
-    const members = await prisma.user.findMany({ where: { role: "USER" }, orderBy: { createdAt: "desc" }, take: 20000, include: { _count: { select: { orders: true } } } });
+    const members = await prisma.user.findMany({ where: { role: "USER", deletedAt: null }, orderBy: { createdAt: "desc" }, take: 20000, include: { _count: { select: { orders: true } } } });
     rows = [
       ["아이디", "이름", "이메일", "휴대전화", "가입일시", "마케팅 수신 동의", "가입 방법", "주문 수"],
       ...members.map((m) => [m.loginId, m.name, m.email, m.phone, kstDateTime(m.createdAt), yesNo(m.marketingOptIn), m.kakaoId ? "카카오" : "일반", m._count.orders]),
@@ -46,11 +45,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
     const products = await prisma.product.findMany({ orderBy: { createdAt: "desc" }, take: 20000 });
     const stocks = groupStock(await prisma.productStock.findMany({ where: { productId: { in: products.map((p) => p.id) } } }));
     rows = [
-      ["상품번호", "이름", "카테고리", "BEST 표시", "NEW 표시", "하위 분류", "정가", "할인율", "할인가", "품절 표시", ...SIZES.map((s) => `재고 ${s}`), "색상", "등록일시"],
+      ["상품번호", "이름", "카테고리", "BEST 표시", "NEW 표시", "하위 분류", "정가", "할인율", "할인가", "품절 표시", "사이즈별 재고", "색상", "등록일시"],
       ...products.map((p) => [
         p.id, p.name, p.category, yesNo(p.inBest || p.category === "best"), yesNo(p.inNew || p.category === "new"), p.subCategory ?? "",
         p.price, saleRate(p.sale) ? `${saleRate(p.sale)}%` : "", unitPrice(p), yesNo(p.soldOut),
-        ...SIZES.map((s) => stocks.get(p.id)?.[s] ?? "무제한"), parseColors(p.colors).map((c) => c.name).join("/"), kstDateTime(p.createdAt),
+        p.sizes.map((s) => `${s}:${stocks.get(p.id)?.[s] ?? "무제한"}`).join(" / "), parseColors(p.colors).map((c) => c.name).join("/"), kstDateTime(p.createdAt),
       ]),
     ];
   } else if (kind === "claims") {

@@ -5,7 +5,6 @@ import { deleteProduct, deleteRemovedCategoryProducts, toggleSoldOut } from "@/a
 import { lists } from "@/lib/lists";
 import { saleRate, unitPrice, won } from "@/lib/orders";
 import { LOW_STOCK, groupStock } from "@/lib/stock";
-import { SIZES } from "@/lib/checkout";
 import { bodyRow, btnDark, btnLine, h2, headRow, notice } from "../styles";
 
 const cols = "110px 1.5fr 110px 60px 1.2fr 250px";
@@ -16,6 +15,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
   const sp = await searchParams;
   const products = await prisma.product.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 200 });
   const removed = products.filter((p) => !lists[p.category]);
+  const waiting = new Map<number, number>();
+  try {
+    const groups = await prisma.restockAlert.groupBy({ by: ["productId"], where: { notifiedAt: null }, _count: { _all: true } });
+    for (const g of groups) waiting.set(g.productId, g._count._all);
+  } catch (e) {
+    console.error("재입고 알림 집계 실패:", e);
+  }
   const stocks = groupStock(await prisma.productStock.findMany({ where: { productId: { in: products.map((p) => p.id) } } }).catch(() => []));
 
   return (
@@ -56,7 +62,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
               <span style={{ fontFamily: "Archivo,sans-serif" }}>{saleRate(p.sale) ? <>{won(unitPrice(p))}<br /><s style={{ fontSize: 11, color: "#767676" }}>{won(p.price)}</s></> : won(p.price)}</span>
               <span>{p.sale ?? "-"}</span>
               <span style={{ fontSize: 12 }}>
-                {SIZES.map((s, n) => {
+                {waiting.get(p.id) ? <span style={{ display: "block", marginBottom: 2, color: "#2d6a2d" }}>재입고 알림 {waiting.get(p.id)}명</span> : null}
+                {p.sizes.map((s, n) => {
                   const q = stocks.get(p.id)?.[s];
                   return (
                     <span key={s} style={{ color: q === 0 ? "#c0392b" : q !== undefined && q <= LOW_STOCK ? "#b9770e" : "#555", fontWeight: q !== undefined && q <= LOW_STOCK ? 700 : 400 }}>
