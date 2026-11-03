@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/db";
 import { pickColor } from "@/lib/colors";
+import { pickSize } from "@/lib/sizes";
 import { unitPrice } from "@/lib/orders";
 
 export type Line = { name: string; price: number; quantity: number; color: string | null; size: string | null; bg: string; productId: number | null };
-export const SIZES = ["S", "M", "L"];
 
 // 주문/결제에 올릴 상품 목록.
 // - 상품 상세에서 BUY NOW로 오면: 그 상품 하나 (이름·가격은 DB 값)
@@ -25,6 +25,7 @@ export async function resolveLines(p: { product?: string; size?: string; qty?: s
   const color = pickColor(product.colors, p.color ?? ""); // 색상 옵션이 있는 상품은 그중 하나여야 합니다.
   if (color === null) return null;
   const quantity = Math.min(10, Math.max(1, Math.floor(Number(p.qty)) || 1));
-  const size = p.size && SIZES.includes(p.size) ? p.size : null;
+  const size = pickSize(product.sizes, p.size ?? "");
+  if (size === null) return null;
   return [{ name: product.name, price: unitPrice(product), quantity, color: color || null, size, bg: product.bg, productId: product.id }];
 }

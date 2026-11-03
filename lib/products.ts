@@ -56,7 +56,7 @@ export async function getListProducts(slug: string, { sub, sort = "new", page = 
     const stocks = groupStock(rows.length ? await prisma.productStock.findMany({ where: { productId: { in: rows.map((r) => r.id) } } }).catch(() => []) : []);
     const items: Item[] = rows.map((r) => ({
       id: r.id,
-      soldOut: r.soldOut || soldOutOf(stocks.get(r.id) ?? {}),
+      soldOut: r.soldOut || soldOutOf(stocks.get(r.id) ?? {}, r.sizes),
       name: r.name,
       ...priceView(r.price, r.sale),
       bg: r.bg,

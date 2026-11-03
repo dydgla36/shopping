@@ -14,6 +14,7 @@ const items = [
   ["공지 관리", "/admin/notices"],
   ["취소·반품·교환", "/admin/claims"],
   ["쿠폰 관리", "/admin/coupons"],
+  ["오류 기록", "/admin/errors"],
   ["DB 설정", "/admin/setup"],
   ["관리자 계정", "/admin/account"],
 ];

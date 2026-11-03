@@ -20,7 +20,12 @@ export function fmtDate(d: Date) {
 export const itemOption = (i: { color?: string | null; size?: string | null }) =>
   [i.color && `COLOR ${i.color}`, i.size && `SIZE ${i.size}`].filter(Boolean).join(" / ");
 
-export const SHIPPING_FEE = 0;
+export const MAX_ADDRESSES = 10; // 저장할 수 있는 배송지 수
+export const FREE_SHIPPING_MIN = 70000; // 상품금액(할인가 합계)이 이 금액 이상이면 배송비 무료
+export const SHIPPING_FEE = 3000; // 무료 조건에 못 미칠 때의 기본 배송비
+export const shippingFeeFor = (itemsTotal: number) => (itemsTotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE);
+// 무료 배송까지 남은 금액 (이미 무료거나 담은 상품이 없으면 0)
+export const untilFreeShipping = (itemsTotal: number) => (itemsTotal > 0 && itemsTotal < FREE_SHIPPING_MIN ? FREE_SHIPPING_MIN - itemsTotal : 0);
 export const POINT_RATE = 0.01; // 배송 완료 시 결제 금액의 1%를 적립금으로 줍니다.
 export const DISCOUNT = 0;
 
@@ -47,3 +52,10 @@ export function unitPrice(p: { price: number; sale?: string | null }) {
 export function priceView(price: number, sale?: string | null): { price: string; finalPrice?: string } {
   return saleRate(sale) ? { price: won(price), finalPrice: won(unitPrice({ price, sale })) } : { price: won(price) };
 }
+
+// ---- 후기 적립금: 20자 이상 후기 500원, 사진을 붙인 후기 1,000원
+export const REVIEW_POINT = 500;
+export const PHOTO_REVIEW_POINT = 1000;
+export const REVIEW_POINT_MIN_LENGTH = 20;
+export const REVIEW_REASON = "후기 적립";
+export const MAX_REVIEW_PHOTOS = 3;

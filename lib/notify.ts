@@ -1,7 +1,7 @@
 import { emailConfigured, sendEmail, siteBase } from "@/lib/email";
+import { esc } from "@/lib/html";
 import { won } from "@/lib/orders";
 
-const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 
 export type NotifyOrder = {
   orderNumber: string;

@@ -1,13 +1,12 @@
 import { prisma } from "@/lib/db";
-import { SIZES } from "@/lib/checkout";
 
 export const LOW_STOCK = 3; // 이 수량 이하면 "재고 부족"으로 보여줍니다.
 
 // 재고 행이 있는 사이즈만 들어 있습니다. 없는 사이즈는 재고를 관리하지 않는 것(무제한)입니다.
 export type StockMap = Record<string, number>;
 
-// 모든 사이즈가 품절(0)이면 상품 전체가 품절입니다.
-export const soldOutOf = (m: StockMap) => SIZES.every((s) => m[s] === 0);
+// 그 상품의 모든 사이즈가 품절(0)이면 상품 전체가 품절입니다.
+export const soldOutOf = (m: StockMap, sizes: string[]) => sizes.length > 0 && sizes.every((s) => m[s] === 0);
 
 export function groupStock(rows: { productId: number; size: string; quantity: number }[]) {
   const by = new Map<number, StockMap>();

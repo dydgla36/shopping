@@ -22,6 +22,8 @@ model Product {
   soldOut     Boolean  @default(false) // 관리자가 품절로 표시 (재고와 상관없이)
   extraImages String[] @default([]) // 추가 이미지 (대표 이미지 외, 최대 5장)
   colors      String[] @default([]) // 색상 옵션 ("이름|#색상코드" 형태)
+  sizes       String[] @default(["S", "M", "L"]) // 사이즈 옵션 (FREE 하나만 있는 상품도 가능)
+  restockAlerts RestockAlert[]
   sale      String?
   position  Int      @default(0)
   createdAt DateTime @default(now())
@@ -39,6 +41,8 @@ model Product {
 model User {
   id             Int      @id @default(autoincrement())
   loginId        String   @unique // 아이디
+  deletedAt      DateTime? // 회원 탈퇴 시각 (탈퇴하면 개인정보를 지우고 이 값만 남깁니다)
+  addresses      Address[]
   kakaoId        String?  @unique // 카카오 로그인으로 가입한 회원의 카카오 번호
   passwordHash   String // 비밀번호는 원문이 아니라 bcrypt 같은 방식으로 암호화한 값만 저장합니다
   name           String
@@ -185,6 +189,7 @@ model Review {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   rating    Int // 1~5
   content   String
+  photos    String[] @default([]) // 후기 사진 (최대 3장)
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
@@ -291,4 +296,49 @@ model RateLimit {
   count       Int       @default(0)
   windowStart DateTime  @default(now())
   lockedUntil DateTime?
+}
+
+// 배송지 목록 (회원별)
+model Address {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label          String? // 배송지 이름 (집, 회사 등)
+  recipientName  String
+  recipientPhone String
+  postcode       String?
+  address        String
+  addressDetail  String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+}
+
+// 재입고 알림 신청 (size가 빈 문자열이면 모든 사이즈)
+model RestockAlert {
+  id         Int       @id @default(autoincrement())
+  productId  Int
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size       String    @default("")
+  email      String
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([productId, size, email])
+}
+
+// 사이트 오류 기록 (같은 오류는 한 줄로 모으고 횟수를 셉니다)
+model ErrorLog {
+  id      Int      @id @default(autoincrement())
+  key     String   @unique
+  source  String // server / client
+  message String
+  stack   String?
+  path    String?
+  count   Int      @default(1)
+  firstAt DateTime @default(now())
+  lastAt  DateTime @default(now())
+
+  @@index([lastAt])
 }

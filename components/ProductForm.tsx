@@ -7,59 +7,17 @@ import ProductCard from "@/components/ProductCard";
 import { priceView, unitPrice, won } from "@/lib/orders";
 import { SUB_CATEGORIES } from "@/lib/categories";
 import { MAX_COLORS, parseColors, type ColorOption } from "@/lib/colors";
+import { DEFAULT_SIZES, MAX_SIZES, SIZE_PRESETS } from "@/lib/sizes";
+import { MAX_ORIGINAL, prepare, uploadImage } from "@/lib/imageClient";
 import { btnDark, input, notice } from "@/app/admin/styles";
 
 const COLORS = ["#e6e3de", "#ddd8d0", "#d6d6d6", "#dcdcdc", "#e8dcd2", "#d9e0e3"];
-const MAX_ORIGINAL = 20 * 1024 * 1024; // 고를 수 있는 원본 파일 크기
-const MAX_UPLOAD = 2 * 1024 * 1024; // 서버로 보내는 파일 크기 (줄인 뒤)
-
-// 올리기 전에 이미지를 줄입니다. (가로 1200px 이하, JPEG) 움직이는 GIF와 이미 작은 파일은 그대로 올립니다.
-async function prepare(file: File): Promise<Blob | null> {
-  if (file.type === "image/gif" && file.size <= MAX_UPLOAD) return file;
-  const bitmap = await createImageBitmap(file).catch(() => {
-    throw new Error("이미지를 읽을 수 없어요. 다른 파일로 시도해 주세요.");
-  });
-  try {
-    if (bitmap.width <= 1200 && file.size <= 700 * 1024) return file;
-    for (const [width, quality] of [[1200, 0.85], [900, 0.75], [600, 0.7]] as const) {
-      const scale = Math.min(1, width / bitmap.width);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(bitmap.width * scale);
-      canvas.height = Math.round(bitmap.height * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return null;
-      ctx.fillStyle = "#fff"; // 투명한 부분은 흰색으로
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
-      if (blob && blob.size <= MAX_UPLOAD) return blob;
-    }
-    return null;
-  } finally {
-    bitmap.close();
-  }
-}
 const MAX_EXTRA = 5; // 추가 이미지 최대 장수
-
-// 이미지 파일 한 장을 줄여서 올리고, 저장된 이미지 주소를 돌려줍니다.
-async function uploadImage(file: File): Promise<string> {
-  if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) throw new Error("JPG, PNG, WEBP, GIF 파일만 올릴 수 있어요.");
-  if (file.size > MAX_ORIGINAL) throw new Error("원본 파일은 20MB 이하여야 해요.");
-  const prepared = await prepare(file).catch(() => null);
-  if (!prepared) throw new Error("이미지를 읽을 수 없거나, 줄여도 2MB를 넘어요.");
-  const fd = new FormData();
-  fd.append("file", prepared, "upload");
-  const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-  if (res.status === 413) throw new Error("이미지가 너무 커요. 더 작은 이미지를 올려 주세요.");
-  const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-  if (!res.ok || !data.url) throw new Error(data.error ?? "업로드에 실패했어요.");
-  return data.url;
-}
 
 const smallBtn = { flex: 1, padding: "4px 0", border: "1px solid #ccc", background: "#fff", color: "#111", cursor: "pointer", fontSize: 12 } as const;
 const label = { display: "block", marginTop: 18, fontSize: 12, color: "#767676" } as const;
 
-export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; subCategory: string | null; inBest: boolean; inNew: boolean; soldOut: boolean; extraImages: string[]; colors: string[]; stock: Record<string, number> };
+export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; subCategory: string | null; inBest: boolean; inNew: boolean; soldOut: boolean; extraImages: string[]; colors: string[]; sizes: string[]; stock: Record<string, number> };
 
 // 상품 추가(product 없음)와 상품 수정(product 있음)에 같이 씁니다.
 export default function ProductForm({ product }: { categories?: string[]; product?: ProductInit }) {
@@ -74,15 +32,25 @@ export default function ProductForm({ product }: { categories?: string[]; produc
     imageUrl: product?.imageUrl ?? "",
     description: product?.description ?? "",
     subCategory: product?.subCategory ?? "",
-    stockS: product && product.stock.S !== undefined ? String(product.stock.S) : "",
-    stockM: product && product.stock.M !== undefined ? String(product.stock.M) : "",
-    stockL: product && product.stock.L !== undefined ? String(product.stock.L) : "",
   });
   // 카테고리: 모든 상품은 WOMEN에 들어가고, BEST·NEW에도 표시할지 고릅니다. 품절 표시도 여기서 정합니다.
   const [flags, setFlags] = useState({ inBest: product?.inBest ?? false, inNew: product?.inNew ?? false, soldOut: product?.soldOut ?? false });
   const toggle = (k: keyof typeof flags) => () => setFlags((f) => ({ ...f, [k]: !f[k] }));
   const chipStyle = (on: boolean) => ({ display: "inline-block", padding: "10px 16px", border: `1px solid ${on ? "#111" : "#ccc"}`, background: on ? "#111" : "#fff", color: on ? "#fff" : "#111", cursor: "pointer", font: "500 13px 'Noto Sans KR',sans-serif" }) as const;
   const hiddenInput = { position: "absolute", opacity: 0, width: 1, height: 1 } as const;
+
+  // 사이즈 옵션과 사이즈별 재고 (FREE 하나만 있는 상품도 만들 수 있어요)
+  const [sizes, setSizes] = useState<string[]>(product?.sizes ?? DEFAULT_SIZES);
+  const [customSize, setCustomSize] = useState("");
+  const [stockText, setStockText] = useState<Record<string, string>>(Object.fromEntries(Object.entries(product?.stock ?? {}).map(([k, n]) => [k, String(n)])));
+  const orderSizes = (list: string[]) => [...SIZE_PRESETS.filter((p) => list.includes(p)), ...list.filter((x) => !SIZE_PRESETS.includes(x))];
+  const toggleSize = (size: string) => setSizes((cur) => (cur.includes(size) ? cur.filter((x) => x !== size) : orderSizes([...cur, size])));
+  function addCustomSize() {
+    const v = customSize.trim();
+    if (!v || v.length > 10 || sizes.includes(v) || sizes.length >= MAX_SIZES) return;
+    setSizes((cur) => orderSizes([...cur, v]));
+    setCustomSize("");
+  }
 
   // 추가 이미지(최대 5장)와 색상 옵션(최대 8개)
   const [extra, setExtra] = useState<string[]>(product?.extraImages ?? []);
@@ -231,17 +199,33 @@ export default function ProductForm({ product }: { categories?: string[]; produc
             ))}
           </div>
         </fieldset>
+        <fieldset style={{ ...label, border: 0, padding: 0 }}>
+          <legend style={{ padding: 0 }}>사이즈 (이 상품에서 고를 수 있는 사이즈를 켜 주세요. 하나만 켜도 돼요. 예: FREE)</legend>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {SIZE_PRESETS.map((sz) => (
+              <label key={sz} style={chipStyle(sizes.includes(sz))}>
+                <input type="checkbox" checked={sizes.includes(sz)} onChange={() => toggleSize(sz)} style={hiddenInput} />
+                {sz}
+              </label>
+            ))}
+            {sizes.filter((x) => !SIZE_PRESETS.includes(x)).map((sz) => (
+              <button key={sz} type="button" onClick={() => toggleSize(sz)} aria-label={`${sz} 사이즈 빼기`} style={chipStyle(true)}>{sz} ×</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <input type="text" value={customSize} maxLength={10} placeholder="직접 추가 (예: 230, 95)" aria-label="직접 추가할 사이즈" onChange={(e) => setCustomSize(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomSize(); } }} style={{ ...input, flex: 1, width: "auto" }} />
+            <button type="button" onClick={addCustomSize} style={{ ...smallBtn, flex: "none", padding: "10px 16px" }}>추가</button>
+          </div>
+          {sizes.map((sz) => <input key={sz} type="hidden" name="sizes" value={sz} />)}
+        </fieldset>
         <fieldset style={{ ...label, border: 0, padding: 0, marginBottom: 0 }}>
           <legend style={{ padding: 0 }}>사이즈별 재고 (비우면 재고를 관리하지 않고 무제한, 0이면 품절)</legend>
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            {(["S", "M", "L"] as const).map((s) => {
-              const k = `stock${s}` as "stockS" | "stockM" | "stockL";
-              return (
-                <label key={s} style={{ flex: 1, fontSize: 12 }}>{s}
-                  <input name={k} type="number" min={0} value={v[k]} onChange={set(k)} placeholder="무제한" style={{ ...input, marginTop: 4 }} />
-                </label>
-              );
-            })}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {sizes.map((sz) => (
+              <label key={sz} style={{ flex: "1 1 80px", fontSize: 12 }}>{sz}
+                <input name={`stock:${sz}`} type="number" min={0} value={stockText[sz] ?? ""} onChange={(e) => setStockText((cur) => ({ ...cur, [sz]: e.target.value }))} placeholder="무제한" style={{ ...input, marginTop: 4 }} />
+              </label>
+            ))}
           </div>
         </fieldset>
         <fieldset style={{ ...label, border: 0, padding: 0 }}>
