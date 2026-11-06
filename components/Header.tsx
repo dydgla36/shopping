@@ -3,11 +3,17 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logout } from "@/app/actions/auth";
 
-const nav = [
+// 왼쪽: SHOP(마우스를 올리면 카테고리가 펼쳐집니다) + 안내 메뉴 / 가운데: 로고 / 오른쪽: 회원·검색·장바구니
+const shop = [
+  ["WOMEN", "/list/women"],
   ["BEST", "/list/best"],
   ["NEW", "/list/new"],
-  ["WOMEN", "/list/women"],
-  ["ABOUT", "/about"],
+];
+const info = [
+  ["BRAND", "/about"],
+  ["NOTICE", "/notice"],
+  ["Q&A", "/qna"],
+  ["REVIEW", "/review"],
 ];
 
 export default async function Header() {
@@ -21,35 +27,47 @@ export default async function Header() {
       console.error("장바구니 개수 조회 실패:", e);
     }
   }
-  const util = [
-    ["REVIEW", "/review"],
-    ["Q&A", "/qna"],
-    ["NOTICE", "/notice"],
-    ["SEARCH", "/search"],
-    ...(user?.role === "ADMIN" ? [["ADMIN", "/admin"]] : []),
-    ...(user ? [] : [["LOGIN", "/login"]]),
-    ["MY PAGE", "/mypage"],
-    [`CART (${cartCount})`, "/cart"],
-  ];
 
   return (
-    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16, padding: "22px 60px", borderBottom: "1px solid #e5e5e5" }}>
-      <Link href="/" style={{ font: "800 32px/1 Archivo,sans-serif", letterSpacing: ".08em" }}>GABBY</Link>
-      <nav className="nav" style={{ display: "flex", flexWrap: "wrap", gap: 28 }}>
-        {nav.map(([label, href]) => (
-          <Link key={href} href={href}>{label}</Link>
-        ))}
-      </nav>
-      <div className="nav" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 22 }}>
-        {user && <span style={{ font: "500 13px 'Noto Sans KR',sans-serif" }}>{user.name}님</span>}
-        {util.map(([label, href]) => (
-          <Link key={href} href={href}>{label}</Link>
-        ))}
-        {user && (
-          <form action={logout}>
-            <button type="submit">LOGOUT</button>
-          </form>
-        )}
+    <header className="hd">
+      <div className="hd-in">
+        <nav className="hd-nav" aria-label="주 메뉴">
+          <div className="dd">
+            <Link className="dd-label" href="/list/women">SHOP</Link>
+            <div className="dd-menu">
+              <div>
+                {shop.map(([label, href]) => (
+                  <Link key={href} href={href}>{label}</Link>
+                ))}
+              </div>
+            </div>
+          </div>
+          {info.map(([label, href]) => (
+            <Link key={href} href={href}>{label}</Link>
+          ))}
+        </nav>
+
+        <Link href="/" className="hd-logo" aria-label="GABBY 홈">GABBY</Link>
+
+        <div className="hd-util">
+          {user ? (
+            <>
+              <span className="hd-name">{user.name}님</span>
+              {user.role === "ADMIN" && <Link href="/admin">ADMIN</Link>}
+              <Link href="/mypage">MY PAGE</Link>
+              <form action={logout}>
+                <button type="submit">LOGOUT</button>
+              </form>
+            </>
+          ) : (
+            <>
+              <Link href="/login">LOGIN</Link>
+              <Link href="/signup">JOIN</Link>
+            </>
+          )}
+          <Link href="/search">SEARCH</Link>
+          <Link href="/cart">CART ({cartCount})</Link>
+        </div>
       </div>
     </header>
   );

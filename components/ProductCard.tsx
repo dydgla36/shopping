@@ -15,7 +15,6 @@ export default function ProductCard({ id, name, price, finalPrice, bg = "#e6e3de
           <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "8px 0", textAlign: "center", background: "rgba(17,17,17,.85)", color: "#fff", font: "700 12px Archivo,sans-serif", letterSpacing: ".1em" }}>SOLD OUT</span>
         )}
       </div>
-      <b>[브랜드명]</b>
       <span>{name}</span>
       <i>
         {sale && finalPrice ? (

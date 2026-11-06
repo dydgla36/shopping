@@ -1,23 +1,34 @@
 import Link from "next/link";
 
+// 소셜 링크는 환경 변수(INSTAGRAM_URL, YOUTUBE_URL, KAKAO_URL)를 넣으면 나타납니다.
+const socials: [string, string | undefined][] = [
+  ["INSTAGRAM", process.env.INSTAGRAM_URL],
+  ["YOUTUBE", process.env.YOUTUBE_URL],
+  ["KAKAO", process.env.KAKAO_URL],
+];
+
 export default function Footer() {
   return (
-    <footer className="foot" style={{ marginTop: 96, background: "#111", color: "#fff", padding: "56px 60px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 40 }}>
-      <div>
-        <div style={{ font: "800 28px Archivo,sans-serif", letterSpacing: ".08em" }}>GABBY</div>
-        <div style={{ marginTop: 14, fontSize: 13, lineHeight: 1.8, color: "#cfcfcf" }}>
-          [상호명] · 대표 [이름]<br />[사업자등록번호] · [통신판매업 신고번호]<br />[주소] · [고객센터 전화번호]
+    <footer className="ft">
+      <div className="ft-in">
+        <div className="ft-brand">GABBY</div>
+        <div className="ft-links">
+          {/* 아래 세 항목은 약관 페이지를 만들면 링크로 바꿔 주세요. */}
+          <span className="ft-todo">이용약관</span>
+          <span className="ft-todo">개인정보처리방침</span>
+          <span className="ft-todo">배송 안내</span>
+          <Link href="/notice">NOTICE</Link>
+          <Link href="/qna">Q&amp;A</Link>
+          <Link href="/review">REVIEW</Link>
+          {socials.filter(([, url]) => url).map(([label, url]) => (
+            <a key={label} href={url} target="_blank" rel="noopener noreferrer">{label}</a>
+          ))}
         </div>
-      </div>
-      <div>
-        <Link href="/review">REVIEW</Link>
-        <Link href="/qna">Q&amp;A</Link>
-        <Link href="/notice">NOTICE</Link>
-      </div>
-      <div>
-        <Link href="/mypage">마이 페이지</Link>
-        <Link href="/login">로그인 / 회원가입</Link>
-        <a href="#">이용약관 · 개인정보처리방침</a>
+        <div className="ft-biz">
+          [상호명] · 대표 [이름] · 사업자등록번호 [번호] · 통신판매업 신고번호 [번호]<br />
+          [주소] · 고객센터 [전화번호] · [이메일]
+        </div>
+        <div className="ft-copy">© GABBY. All rights reserved.</div>
       </div>
     </footer>
   );
