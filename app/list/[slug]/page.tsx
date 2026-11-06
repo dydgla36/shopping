@@ -58,7 +58,7 @@ export default async function ListPage({ params, searchParams }: { params: Promi
         {items.length === 0 ? (
           <div style={{ padding: "64px 0", textAlign: "center", fontSize: 14, color: "#767676" }}>{failed ? "상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : "조건에 맞는 상품이 없어요."}</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "40px 20px", marginTop: 32 }}>
+          <div className="grid" style={{ marginTop: 32 }}>
             {items.map((item) => <ProductCard key={item.id} {...item} />)}
           </div>
         )}
