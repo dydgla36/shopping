@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Header from "@/components/Header";
+import Marquee from "@/components/Marquee";
+import ScrollTop from "@/components/ScrollTop";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,19 +18,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Cormorant+Garamond:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@400;600&display=swap"
           rel="stylesheet"
         />
       </head>
       <body>
-        <div style={{ width: "100%", maxWidth: 1440, margin: "0 auto", background: "#fff", color: "#111", fontFamily: "'Noto Sans KR',sans-serif" }}>
-          <div style={{ background: "#111", color: "#fff", textAlign: "center", padding: "11px 16px", fontSize: 13 }}>
-            카카오 계정으로 3초 만에 가입하세요
-          </div>
-          <Header />
-          {children}
-          <Footer />
-        </div>
+        <Marquee />
+        <Header />
+        <main id="main">{children}</main>
+        <Footer />
+        <ScrollTop />
       </body>
     </html>
   );
