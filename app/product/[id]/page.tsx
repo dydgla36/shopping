@@ -185,7 +185,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       {related.length > 0 && (
         <section style={{ padding: "96px 60px 0" }}>
           <div style={{ marginBottom: 28, font: "800 26px Archivo,sans-serif" }}>YOU MAY ALSO LIKE</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "28px 20px" }}>
+          <div className="grid">
             {related.map((p) => (
               <ProductCard key={p.id} id={p.id} name={p.name} {...priceView(p.price, p.sale)} bg={p.bg} sale={p.sale ?? undefined} imageUrl={p.imageUrl ?? undefined} />
             ))}
