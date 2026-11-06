@@ -44,7 +44,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                 )}
               </Link>
               <div>
-                <div style={{ font: "400 12px Archivo,sans-serif", color: "#767676" }}>[브랜드명]</div>
+                <div style={{ font: "400 12px Archivo,sans-serif", letterSpacing: ".16em", color: "#767676" }}>GABBY</div>
                 <Link href={`/product/${i.productId}`} style={{ display: "block", marginTop: 4, font: "500 15px/1.4 'Noto Sans KR',sans-serif" }}>{i.product.name}</Link>
                 <div style={{ marginTop: 6, fontSize: 13, color: "#767676" }}>{i.color ? `COLOR ${i.color} / ` : ""}SIZE {i.size}</div>
                 {problem(i) && <div role="alert" style={{ marginTop: 6, fontSize: 12, color: "#c0392b" }}>{problem(i)}</div>}
