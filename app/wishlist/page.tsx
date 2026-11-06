@@ -28,7 +28,7 @@ export default async function Page() {
             <div style={{ marginTop: 20 }}><Link href="/list/best" style={{ borderBottom: "1px solid #111", color: "#111" }}>BEST 상품 보러 가기</Link></div>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "40px 20px", marginTop: 32 }}>
+          <div className="grid" style={{ marginTop: 32 }}>
             {items.map((i) => (
               <div key={i.id}>
                 <ProductCard id={i.productId} name={i.product.name} {...priceView(i.product.price, i.product.sale)} bg={i.product.bg} sale={i.product.sale ?? undefined} imageUrl={i.product.imageUrl ?? undefined} soldOut={i.product.soldOut || soldOutOf(stocks.get(i.productId) ?? {}, i.product.sizes)} />
