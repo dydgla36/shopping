@@ -73,7 +73,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
         <form action={addToCart} style={{ maxWidth: 520 }}>
           <input type="hidden" name="product" value={product.id} />
-          <div style={{ font: "700 13px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>[브랜드명]</div>
+          <div style={{ font: "700 13px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>GABBY</div>
           <h1 style={{ margin: "10px 0 0", font: "700 28px/1.35 'Noto Sans KR',sans-serif" }}>{product.name}</h1>
           <div style={{ marginTop: 14, font: "800 24px Archivo,sans-serif" }}>
             {pv.finalPrice ? (
