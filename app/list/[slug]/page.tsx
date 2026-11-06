@@ -37,19 +37,19 @@ export default async function ListPage({ params, searchParams }: { params: Promi
 
   return (
     <>
-      <div style={{ padding: "24px 60px 0", fontSize: 12, color: "#767676" }}>
+      <div className="crumb-c" style={{ padding: "24px 60px 0", fontSize: 12, color: "#767676" }}>
         <Link href="/" style={{ color: "#767676" }}>HOME</Link> &gt; {list.title}
       </div>
       <section style={{ padding: "20px 60px 0" }}>
-        <h1 style={{ margin: 0, font: "800 40px Archivo,sans-serif", letterSpacing: ".04em" }}>{list.title}</h1>
-        <p style={{ margin: "10px 0 0", fontSize: 14, color: "#555" }}>{list.sub}</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 28 }}>
+        <h1 style={{ margin: 0, textAlign: "center", font: "800 40px Archivo,sans-serif", letterSpacing: ".04em" }}>{list.title}</h1>
+        <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 14, color: "#555" }}>{list.sub}</p>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>
           <Link href={href({ sub: undefined })} style={chip(!sub)}>전체</Link>
           {SUB_CATEGORIES.map((c) => <Link key={c} href={href({ sub: c })} style={chip(sub === c)}>{c}</Link>)}
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 28, padding: "16px 0", borderTop: "1px solid #111", borderBottom: "1px solid #e5e5e5", fontSize: 13 }}>
+        <div className="list-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 28, padding: "16px 0", borderTop: "1px solid #111", borderBottom: "1px solid #e5e5e5", fontSize: 13 }}>
           <span>총 <b>{total.toLocaleString("ko-KR")}</b>개의 상품</span>
-          <span style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+          <span style={{ display: "flex", gap: 18, flexWrap: "wrap", justifyContent: "center" }}>
             {SORTS.map(([key, label]) => (
               <Link key={key} href={href({ sort: key === "new" ? undefined : key })} style={{ fontWeight: sort === key ? 700 : 400, color: sort === key ? "#111" : "#767676" }}>{label}</Link>
             ))}
