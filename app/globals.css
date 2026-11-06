@@ -106,4 +106,7 @@ h1,h2{font-family:var(--serif)!important;font-weight:600!important;letter-spacin
   .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 10px}
   .sh2{margin-bottom:28px}
   .card span{font-size:12px}
+  /* 카테고리 화면: 제목 영역과 정렬 줄을 가운데로 */
+  .crumb-c{text-align:center}
+  .list-bar{justify-content:center!important;text-align:center}
 }
