@@ -98,4 +98,12 @@ h1,h2{font-family:var(--serif)!important;font-weight:600!important;letter-spacin
 
 /* 맨 위로 가기 버튼 */
 .to-top{position:fixed;right:20px;bottom:20px;z-index:40;width:44px;height:44px;border-radius:50%;border:1px solid #ddd;background:#fff;color:#111;font:500 10px Archivo,sans-serif;letter-spacing:.08em;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.08)}
-@media(max-width:700px){.sec{padding:64px 16px 0}.tile{min-height:360px}.hero-in{padding:56px 20px}}
+@media(max-width:700px){
+  .sec{padding:64px 0 0}.tile{min-height:360px}.hero-in{padding:56px 20px}
+  /* 휴대폰: 양옆 여백을 줄이고(모든 화면), 상품은 한 줄에 2개씩 보여줍니다 */
+  #main>*{padding-left:14px!important;padding-right:14px!important}
+  #main>.hero{padding-left:0!important;padding-right:0!important}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 10px}
+  .sh2{margin-bottom:28px}
+  .card span{font-size:12px}
+}
