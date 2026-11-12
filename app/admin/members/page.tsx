@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { fmtDate } from "@/lib/orders";
@@ -32,7 +33,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
           {members.length === 0 && <div style={{ padding: "28px 12px", fontSize: 14, color: "#767676" }}>회원이 없어요.</div>}
           {members.map((m) => (
             <div key={m.id} style={bodyRow(cols)}>
-              <span>{m.name}</span><span>{m.loginId}</span><span style={{ wordBreak: "break-all" }}>{m.email}</span>
+              <span><Link href={`/admin/members/${m.id}`} style={{ borderBottom: "1px solid #ccc" }}>{m.name}</Link></span><span>{m.loginId}</span><span style={{ wordBreak: "break-all" }}>{m.email}</span>
               <span>{m.phone}</span><span style={{ color: "#767676" }}>{fmtDate(m.createdAt)}</span><span>{m._count.orders}건</span>
             </div>
           ))}

@@ -13,7 +13,7 @@ const badge = { display: "inline-block", marginRight: 4, padding: "1px 6px", bac
 export default async function Page({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   await requireAdmin("/admin/products");
   const sp = await searchParams;
-  const products = await prisma.product.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 200 });
+  const products = await prisma.product.findMany({ select: { id: true, category: true, name: true, price: true, sale: true, sizes: true, subCategory: true, inBest: true, inNew: true, soldOut: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 200 });
   const removed = products.filter((p) => !lists[p.category]);
   const waiting = new Map<number, number>();
   try {

@@ -3,7 +3,6 @@ button,input,select,textarea{color:#111}
 body{margin:0;font-family:'Noto Sans KR',sans-serif;color:#111;background:#fff}
 a{color:#111;text-decoration:none}a:hover{color:#6b6b6b}
 .btn{display:block;text-align:center;padding:17px 28px;font:700 13px Archivo,sans-serif;letter-spacing:.08em}
-.lbl{font:700 12px Archivo,sans-serif;letter-spacing:.1em;color:#767676;margin:28px 0 10px}
 .opt{position:absolute;opacity:0}
 .opt+label{display:inline-block;min-width:48px;text-align:center;padding:12px 14px;border:1px solid #ccc;margin:0 6px 6px 0;font:500 13px Archivo,sans-serif;cursor:pointer}
 .opt:checked+label{border-color:#111;background:#111;color:#fff}
@@ -92,7 +91,6 @@ h1,h2{font-family:var(--serif)!important;font-weight:600!important;letter-spacin
 .ft-brand{font:600 28px var(--serif);letter-spacing:.3em;text-indent:.3em}
 .ft-links{display:flex;justify-content:center;flex-wrap:wrap;gap:10px 28px;margin-top:28px;font:500 12px Archivo,'Noto Sans KR',sans-serif;letter-spacing:.1em}
 .ft-links a{color:#4a3b36}.ft-links a:hover{color:#8a6f66}
-.ft-todo{color:#a89c96}
 .ft-biz{margin-top:28px;font:400 12px/1.9 'Noto Sans KR',sans-serif;color:#7b6c66}
 .ft-copy{margin-top:20px;font:400 11px Archivo,sans-serif;letter-spacing:.08em;color:#a89c96}
 
@@ -109,4 +107,28 @@ h1,h2{font-family:var(--serif)!important;font-weight:600!important;letter-spacin
   /* 카테고리 화면: 제목 영역과 정렬 줄을 가운데로 */
   .crumb-c{text-align:center}
   .list-bar{justify-content:center!important;text-align:center}
+}
+
+/* 상품 상세: 구매 버튼 줄. 휴대폰에서는 화면 아래에 붙어 있습니다. */
+.buy-bar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:32px}
+.buy-bar .buy-wish{grid-column:1/-1;order:3}
+@media(max-width:700px){
+  .buy-bar{position:fixed;left:0;right:0;bottom:0;z-index:45;margin:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e5e5e5;grid-template-columns:52px 1fr 1fr}
+  .buy-bar .buy-wish{grid-column:auto;order:-1;padding:0;font-size:20px}
+  .buy-bar .wl-label{display:none}
+  .buy-bar .btn{padding:15px 0}
+  body:has(.buy-bar){padding-bottom:76px}
+  body:has(.buy-bar) .to-top{bottom:88px}
+  body:has(.buy-bar) .chat-btn{bottom:142px}
+}
+
+/* 카카오톡 상담 버튼 */
+.chat-btn{position:fixed;right:20px;bottom:74px;z-index:40;width:44px;height:44px;border-radius:50%;background:#fee500;color:#191919;display:flex;align-items:center;justify-content:center;font:700 11px 'Noto Sans KR',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+
+/* 인쇄: 주문서·송장만 깔끔하게 */
+@media print{
+  .mq,.hd,.ft,.to-top,.chat-btn,.no-print{display:none!important}
+  .admin-area{padding:0!important}
+  body{padding-bottom:0!important}
+  .slip{break-after:page;page-break-after:always}
 }

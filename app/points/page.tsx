@@ -2,7 +2,8 @@ import Link from "next/link";
 import Pager from "@/components/Pager";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { POINT_RATE, fmtDate } from "@/lib/orders";
+import { GRADES, ratePercent } from "@/lib/grades";
+import { fmtDate } from "@/lib/orders";
 import { bodyRow, box, crumb, h1, headRow, pageWrap, subtitle } from "@/lib/ui";
 
 export const metadata = { title: "적립금" };
@@ -28,7 +29,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
       <div style={crumb}><Link href="/" style={{ color: "#767676" }}>HOME</Link> &gt; <Link href="/mypage" style={{ color: "#767676" }}>MY PAGE</Link> &gt; 적립금</div>
       <section style={pageWrap}>
         <h1 style={{ ...h1, fontSize: 30 }}>POINTS</h1>
-        <p style={subtitle}>배송이 완료되면 결제 금액의 {Math.round(POINT_RATE * 100)}%가 적립돼요. 적립금은 주문/결제에서 사용할 수 있어요.</p>
+        <p style={subtitle}>배송이 완료되면 결제 금액의 {GRADES.map((g) => `${g.name} ${ratePercent(g.rate)}`).join(" · ")}가 회원 등급에 따라 적립돼요. 적립금은 주문/결제에서 사용할 수 있어요.</p>
         <div style={{ ...box, display: "flex", flexWrap: "wrap", gap: 24, marginTop: 28 }}>
           {stat("사용 가능 적립금", sum._sum.amount ?? 0)}
           {stat("총 적립", earned._sum.amount ?? 0)}

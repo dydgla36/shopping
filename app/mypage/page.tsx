@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { STATUS_LABEL, fmtDate, won } from "@/lib/orders";
+import { gradeFor, nextGrade } from "@/lib/grades";
 
 export const metadata = { title: "마이페이지" };
 
@@ -23,10 +24,14 @@ export default async function Page() {
     prisma.order.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 5, include: { items: true } }),
     prisma.order.groupBy({ by: ["status"], where: { userId: user.id }, _count: { _all: true } }),
   ]);
-  const [pointSum, couponCount] = await Promise.all([
+  const [pointSum, couponCount, spentAgg] = await Promise.all([
     prisma.pointLog.aggregate({ where: { userId: user.id }, _sum: { amount: true } }).catch(() => null),
     prisma.userCoupon.count({ where: { userId: user.id, usedAt: null, coupon: { active: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } } }).catch(() => 0),
+    prisma.order.aggregate({ where: { userId: user.id, status: "DELIVERED" }, _sum: { total: true, shippingFee: true } }).catch(() => null),
   ]);
+  const spent = (spentAgg?._sum.total ?? 0) - (spentAgg?._sum.shippingFee ?? 0);
+  const grade = gradeFor(spent);
+  const upcoming = nextGrade(spent);
   const count = (...statuses: string[]) => grouped.filter((g) => statuses.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
   const stats = [
     ["주문 접수", count("PENDING")],
@@ -50,7 +55,7 @@ export default async function Page() {
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 24, padding: 28, background: "#f4f2ee" }}>
             <div>
               <div style={{ font: "700 18px 'Noto Sans KR',sans-serif" }}>{user.name}님, 안녕하세요</div>
-              <div style={{ marginTop: 6, fontSize: 13, color: "#767676" }}>회원 등급 [등급]</div>
+              <div style={{ marginTop: 6, fontSize: 13, color: "#767676" }}>회원 등급 <b style={{ color: "#111" }}>{grade.name}</b>{upcoming ? ` · ${won(upcoming.min - spent)} 더 구매하면 ${upcoming.name}` : ""}</div>
             </div>
             <div style={{ display: "flex", gap: 40 }}>
               <div><div style={{ fontSize: 12, color: "#767676" }}>적립금</div><div style={{ marginTop: 4, font: "800 20px Archivo,sans-serif" }}>{(pointSum?._sum.amount ?? 0).toLocaleString("ko-KR")}원</div></div>

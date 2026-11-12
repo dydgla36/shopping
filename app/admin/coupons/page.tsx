@@ -25,6 +25,7 @@ export default async function Page() {
           <label className="fld">할인 값 (정률이면 1~100, 정액이면 원)<input name="value" type="number" min={1} required /></label>
           <label className="fld">최소 주문 금액 (원, 선택)<input name="minOrder" type="number" min={0} placeholder="0" /></label>
           <label className="fld">만료일 (선택, 비우면 기간 제한 없음)<input name="expiresAt" type="date" /></label>
+          <label className="fld">자동 발급<select name="autoIssue" defaultValue=""><option value="">없음 (고객이 쿠폰 번호를 등록)</option><option value="SIGNUP">회원가입 때 자동으로 지급</option></select></label>
         </ActionForm>
       </div>
       <div style={{ overflowX: "auto", marginTop: 32 }}>
@@ -36,7 +37,7 @@ export default async function Page() {
             return (
               <div key={c.id} style={bodyRow(cols)}>
                 <span style={{ fontFamily: "Archivo,sans-serif", fontSize: 13 }}>{c.code}</span>
-                <span>{c.name} · <b>{couponText(c)}</b></span>
+                <span>{c.name} · <b>{couponText(c)}</b>{c.autoIssue === "SIGNUP" && <span style={{ display: "block", fontSize: 11, color: "#8a6f66" }}>가입 시 자동 지급</span>}</span>
                 <span>{c._count.users}명</span>
                 <span style={{ fontSize: 12, color: "#767676" }}>{c.minOrder > 0 ? `${won(c.minOrder)} 이상` : "제한 없음"}<br />{c.expiresAt ? `${fmtDate(c.expiresAt)}까지` : "기간 없음"}</span>
                 <span style={{ fontWeight: 700, color: c.active && !expired ? "#2d6a2d" : "#767676" }}>{expired ? "만료" : c.active ? "사용 중" : "중지"}</span>

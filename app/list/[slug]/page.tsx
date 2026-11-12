@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return { title: lists[slug]?.title };
+  return { title: lists[slug]?.title, description: lists[slug]?.sub };
 }
 
 export default async function ListPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ sub?: string; sort?: string; page?: string }> }) {

@@ -3,19 +3,27 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
 import ActionForm from "@/components/ActionForm";
+import ProductDetailContent from "@/components/ProductDetailContent";
 import ProductGallery from "@/components/ProductGallery";
+import ReturnPolicy from "@/components/ReturnPolicy";
+import SizeChartTable from "@/components/SizeChartTable";
 import { requestRestock } from "@/app/actions/restock";
 import ReviewPhotos from "@/components/ReviewPhotos";
 import { parseColors } from "@/lib/colors";
+import { parseDetail, parseSizeChart } from "@/lib/productContent";
 import { prisma } from "@/lib/db";
+import { siteUrl } from "@/lib/site";
+import { CARD_SELECT } from "@/lib/products";
 import { getCurrentUser } from "@/lib/auth";
 import { LOW_STOCK, soldOutOf, stockMap, type StockMap } from "@/lib/stock";
-import { FREE_SHIPPING_MIN, SHIPPING_FEE, priceView, won } from "@/lib/orders";
+import { FREE_SHIPPING_MIN, SHIPPING_FEE, priceView, unitPrice, won } from "@/lib/orders";
 import { addToCart, buyNow } from "@/app/actions/cart";
 import { toggleWishlist } from "@/app/actions/wishlist";
 import { maskName } from "@/lib/mask";
 import { fmtDate } from "@/lib/orders";
 import { stars } from "@/lib/ui";
+import ShareButton from "@/components/ShareButton";
+import RecentlyViewed from "@/components/RecentlyViewed";
 
 // 관리자가 DB에 등록한 상품의 상세 페이지입니다. (/product/상품번호)
 // getProduct는 제목(generateMetadata)과 화면이 같은 요청 안에서 함께 써도 DB 조회를 한 번만 합니다.
@@ -34,7 +42,10 @@ const getProduct = cache(async (raw: string) => {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const product = await getProduct((await params).id);
-  return { title: product?.name ?? "상품 상세" };
+  if (!product) return { title: "상품 상세" };
+  const description = (product.description ?? "").replace(/\s+/g, " ").trim().slice(0, 150) || `${product.name} - GABBY`;
+  const image = product.imageUrl ? (product.imageUrl.startsWith("/") ? `${siteUrl()}${product.imageUrl}` : product.imageUrl) : undefined;
+  return { title: product.name, description, alternates: { canonical: `/product/${product.id}` }, openGraph: { title: product.name, description, images: image ? [image] : undefined } };
 }
 
 const label = { font: "700 12px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676", margin: "28px 0 10px" } as const;
@@ -49,7 +60,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const [stock, wished, related] = await Promise.all([
     stockMap(product.id).catch((): StockMap => ({})),
     user ? prisma.wishlistItem.findUnique({ where: { userId_productId: { userId: user.id, productId: product.id } } }).catch(() => null) : null,
-    prisma.product.findMany({ where: { category: product.category, NOT: { id: product.id } }, orderBy: { position: "asc" }, take: 4 }),
+    prisma.product.findMany({ where: { category: product.category, NOT: { id: product.id } }, orderBy: { position: "asc" }, take: 4, select: CARD_SELECT }),
   ]);
   // 후기 (후기 테이블이 아직 없어도 상세 화면은 보이게 합니다)
   const [reviews, reviewAgg] = await Promise.all([
@@ -61,10 +72,24 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   // 지금 살 수 없는 사이즈 (상품 전체가 품절이면 모든 사이즈)
   const unavailableSizes = product.soldOut ? product.sizes : product.sizes.filter((s) => stock[s] === 0);
   const colorOptions = parseColors(product.colors);
+  const hasDetail = parseDetail(product.detailContent).length > 0;
+  const hasChart = parseSizeChart(product.sizeChart) !== null;
   const firstAvailable = product.sizes.find((s) => stock[s] !== 0) ?? product.sizes[0]; // 품절이 아닌 사이즈를 기본 선택
 
+  // 검색 사이트가 상품 정보를 이해하도록 구조화된 데이터를 넣습니다.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: product.imageUrl ? [product.imageUrl.startsWith("/") ? `${siteUrl()}${product.imageUrl}` : product.imageUrl] : undefined,
+    description: (product.description ?? "").slice(0, 300) || undefined,
+    sku: String(product.id),
+    brand: { "@type": "Brand", name: "GABBY" },
+    offers: { "@type": "Offer", priceCurrency: "KRW", price: unitPrice(product), availability: soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", url: `${siteUrl()}/product/${product.id}` },
+  };
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <div style={{ padding: "24px 60px 0", fontSize: 12, color: "#767676" }}>
         <Link href="/" style={{ color: "#767676" }}>HOME</Link> &gt; <Link href={`/list/${product.category}`} style={{ color: "#767676" }}>{product.category.toUpperCase()}</Link> &gt; {product.name}
       </div>
@@ -75,6 +100,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           <input type="hidden" name="product" value={product.id} />
           <div style={{ font: "700 13px Archivo,sans-serif", letterSpacing: ".1em", color: "#767676" }}>GABBY</div>
           <h1 style={{ margin: "10px 0 0", font: "700 28px/1.35 'Noto Sans KR',sans-serif" }}>{product.name}</h1>
+          <ShareButton title={product.name} />
           <div style={{ marginTop: 14, font: "800 24px Archivo,sans-serif" }}>
             {pv.finalPrice ? (
               <>
@@ -126,21 +152,23 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
 
-          {soldOut ? (
-            <button type="button" disabled className="btn" style={{ width: "100%", marginTop: 32, background: "#ccc", color: "#fff", border: 0 }}>SOLD OUT</button>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 32 }}>
-              <button type="submit" className="btn" style={{ background: "#fff", color: "#111", border: "1px solid #111", cursor: "pointer" }}>ADD TO CART</button>
-              <button type="submit" formAction={buyNow} className="btn" style={{ background: "#111", color: "#fff", border: 0, cursor: "pointer" }}>BUY NOW</button>
-            </div>
-          )}
-          <button type="submit" formAction={toggleWishlist} formNoValidate aria-pressed={!!wished} className="btn" style={{ width: "100%", marginTop: 10, background: "#fff", color: "#111", border: "1px solid #ccc", cursor: "pointer" }}>
-            {wished ? "♥ WISHLIST" : "♡ WISHLIST"}
-          </button>
+          <div className="buy-bar">
+            {soldOut ? (
+              <button type="button" disabled className="btn" style={{ gridColumn: "span 2", background: "#ccc", color: "#fff", border: 0 }}>SOLD OUT</button>
+            ) : (
+              <>
+                <button type="submit" className="btn" style={{ background: "#fff", color: "#111", border: "1px solid #111", cursor: "pointer" }}>ADD TO CART</button>
+                <button type="submit" formAction={buyNow} className="btn" style={{ background: "#111", color: "#fff", border: 0, cursor: "pointer" }}>BUY NOW</button>
+              </>
+            )}
+            <button type="submit" formAction={toggleWishlist} formNoValidate aria-pressed={!!wished} aria-label="관심 상품" className="btn buy-wish" style={{ background: "#fff", color: "#111", border: "1px solid #ccc", cursor: "pointer" }}>
+              {wished ? "♥" : "♡"}<span className="wl-label"> WISHLIST</span>
+            </button>
+          </div>
           {!user && <p style={{ margin: "10px 0 0", fontSize: 12, lineHeight: 1.7, color: "#767676" }}>비회원도 BUY NOW로 바로 주문할 수 있어요. 장바구니와 관심 상품은 로그인이 필요해요.</p>}
           <div style={{ marginTop: 36, fontSize: 13, lineHeight: 1.9, color: "#555", borderTop: "1px solid #e5e5e5", paddingTop: 20 }}>
-            <b style={{ color: "#111" }}>배송 안내</b> {won(FREE_SHIPPING_MIN)} 이상 구매 시 무료배송 (미만 {won(SHIPPING_FEE)}) · [배송 기간 안내]<br />
-            <b style={{ color: "#111" }}>교환·반품</b> [교환·반품 정책 안내]
+            <b style={{ color: "#111" }}>배송 안내</b> {won(FREE_SHIPPING_MIN)} 이상 구매 시 무료배송 (미만 {won(SHIPPING_FEE)})<br />
+            <b style={{ color: "#111" }}>교환·반품</b> 받은 날부터 7일 이내 · <a href="#policy" style={{ borderBottom: "1px solid #555" }}>자세히 보기</a>
           </div>
         </form>
       </section>
@@ -166,7 +194,32 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </section>
       )}
 
-      <section style={{ padding: "72px 60px 0", maxWidth: 960 }}>
+      <nav aria-label="상품 정보 메뉴" style={{ display: "flex", justifyContent: "center", gap: 28, flexWrap: "wrap", margin: "72px 0 0", padding: "16px 12px", borderTop: "1px solid #111", borderBottom: "1px solid #e5e5e5", font: "500 12px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".12em" }}>
+        {hasDetail && <a href="#detail">상품 정보</a>}
+        <a href="#policy">배송·교환·반품</a>
+        {hasChart && <a href="#size">사이즈표</a>}
+        <a href="#reviews">후기</a>
+      </nav>
+
+      {hasDetail && (
+        <section id="detail" style={{ padding: "48px 0 0", scrollMarginTop: 96 }}>
+          <ProductDetailContent raw={product.detailContent} />
+        </section>
+      )}
+
+      <section id="policy" style={{ padding: "56px 24px 0", maxWidth: 780, scrollMarginTop: 96 }}>
+        <h2 style={{ margin: 0, fontSize: 28 }}>SHIPPING &amp; RETURN</h2>
+        <ReturnPolicy />
+      </section>
+
+      {hasChart && (
+        <section id="size" style={{ padding: "56px 24px 0", maxWidth: 780, scrollMarginTop: 96 }}>
+          <h2 style={{ margin: 0, fontSize: 28 }}>SIZE GUIDE</h2>
+          <SizeChartTable raw={product.sizeChart} />
+        </section>
+      )}
+
+      <section id="reviews" style={{ padding: "72px 60px 0", maxWidth: 960, scrollMarginTop: 96 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 12, paddingBottom: 14, borderBottom: "1px solid #111" }}>
           <div style={{ font: "800 22px Archivo,sans-serif" }}>REVIEW{reviewAgg && reviewAgg._count._all > 0 && <span style={{ marginLeft: 12, fontSize: 15, fontWeight: 700 }}>★ {reviewAgg._avg.rating?.toFixed(1)} <span style={{ color: "#767676", fontWeight: 400 }}>({reviewAgg._count._all})</span></span>}</div>
           <Link href={`/review?product=${product.id}`} style={{ fontSize: 13, borderBottom: "1px solid #111" }}>후기 전체 보기</Link>
@@ -192,6 +245,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
         </section>
       )}
+      <RecentlyViewed currentId={product.id} />
     </>
   );
 }

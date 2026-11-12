@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { tokenOk } from "@/lib/guest";
+import DepositBox from "@/components/DepositBox";
 import { fullAddress, won } from "@/lib/orders";
 
 export const metadata = { title: "주문 완료" };
@@ -45,6 +46,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         <div style={rowStyle}><span style={{ color: "#767676" }}>배송지</span><span style={{ textAlign: "right" }}>{fullAddress(order)}</span></div>
         <div style={rowStyle}><span style={{ color: "#767676" }}>결제 금액</span><b style={{ fontFamily: "Archivo,sans-serif" }}>{won(order.total)}</b></div>
       </div>
+      <DepositBox order={order} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 36 }}>
         <Link className="btn" href={detailHref} style={{ border: "1px solid #111" }}>ORDER DETAIL</Link>
         <Link className="btn" href="/" style={{ background: "#111", color: "#fff" }}>CONTINUE SHOPPING</Link>

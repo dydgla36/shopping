@@ -6,14 +6,13 @@ import ActionForm from "@/components/ActionForm";
 import { createClaim } from "@/app/actions/claims";
 import { cancelMyOrder } from "@/app/actions/cancel";
 import { CLAIM_STATUS, CLAIM_TYPE, STATUS_LABEL, fmtDate, fullAddress, itemOption, won } from "@/lib/orders";
+import { line, Row } from "@/components/InfoRows";
+import DepositBox from "@/components/DepositBox";
+import { trackingUrl } from "@/lib/carriers";
 
 export const metadata = { title: "주문 상세" };
 
 const head = { font: "800 16px Archivo,'Noto Sans KR',sans-serif", letterSpacing: ".06em" } as const;
-const line = { display: "flex", justifyContent: "space-between", gap: 20, padding: "14px 0", borderBottom: "1px solid #e5e5e5", fontSize: 14 } as const;
-const Row = ({ a, b }: { a: string; b: React.ReactNode }) => (
-  <div style={line}><span style={{ color: "#767676", flexShrink: 0 }}>{a}</span><span style={{ textAlign: "right" }}>{b}</span></div>
-);
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ no?: string }> }) {
   const { no } = await searchParams;
@@ -41,6 +40,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           <div><div style={{ fontSize: 12, color: "#767676" }}>주문 상태</div><div style={{ marginTop: 6, fontWeight: 700, fontSize: 18 }}>{STATUS_LABEL[order.status] ?? order.status}</div></div>
         </div>
 
+        <DepositBox order={order} />
         {order.status === "CANCELED" && (
           <div role="status" style={{ marginTop: 20, padding: "16px 20px", background: "#fbeeee", fontSize: 14, lineHeight: 1.8 }}>
             <b>취소된 주문이에요.</b>{order.canceledAt && <span style={{ color: "#767676" }}> ({fmtDate(order.canceledAt)})</span>}
@@ -51,6 +51,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           <div style={{ marginTop: 20, padding: "16px 20px", border: "1px solid #111", fontSize: 14, lineHeight: 1.8 }}>
             <b style={{ marginRight: 12 }}>배송 조회</b>
             택배사 <b>{order.carrier ?? "-"}</b> · 운송장 번호 <b style={{ fontFamily: "Archivo,sans-serif" }}>{order.trackingNumber ?? "-"}</b>
+            {trackingUrl(order.carrier, order.trackingNumber) && <> · <a href={trackingUrl(order.carrier, order.trackingNumber) ?? "#"} target="_blank" rel="noopener noreferrer" style={{ borderBottom: "1px solid #111" }}>배송 추적</a></>}
           </div>
         )}
         {order.adminMemo && (

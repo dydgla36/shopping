@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { isDuplicate } from "@/lib/errors";
+import { internalImageIds } from "@/lib/imageRefs";
 import { REVIEW_REASON } from "@/lib/orders";
+import { FAQ_CATEGORIES } from "@/lib/faq";
 import type { ActionState } from "@/components/ActionForm";
 
 // 관리자 전용 동작 모음 (공지, 문의 답변, 후기 삭제). 모든 동작은 맨 처음에 관리자인지 확인합니다.
 const num = (f: FormData, k: string) => Number(f.get(k));
-const PHOTO_ID = /^\/api\/product-image\/([A-Za-z0-9_-]{10,40})$/;
 
 export async function saveNotice(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin("/admin/notices");
@@ -65,7 +66,7 @@ export async function deleteReview(formData: FormData) {
       const earned = await tx.pointLog.aggregate({ where: { userId: review.userId, reason: `${REVIEW_REASON} (후기 #${id})` }, _sum: { amount: true } });
       const amount = earned._sum.amount ?? 0;
       if (amount > 0) await tx.pointLog.create({ data: { userId: review.userId, amount: -amount, reason: `후기 삭제로 적립금 회수 (후기 #${id})` } });
-      const photoIds = review.photos.map((u) => PHOTO_ID.exec(u)?.[1]).filter((x): x is string => Boolean(x));
+      const photoIds = internalImageIds(review.photos);
       if (photoIds.length > 0) await tx.productImage.deleteMany({ where: { id: { in: photoIds } } });
       await tx.review.delete({ where: { id } });
     });
@@ -91,7 +92,7 @@ export async function createCoupon(_prev: ActionState, formData: FormData): Prom
   const expiresAt = expires ? new Date(`${expires}T23:59:59+09:00`) : null;
   if (expiresAt && Number.isNaN(expiresAt.getTime())) return { error: "만료일 형식을 확인해 주세요." };
   try {
-    await prisma.coupon.create({ data: { code, name, kind, value, minOrder, expiresAt } });
+    await prisma.coupon.create({ data: { code, name, kind, value, minOrder, expiresAt, autoIssue: String(formData.get("autoIssue") ?? "") === "SIGNUP" ? "SIGNUP" : null } });
   } catch (e) {
     return { error: isDuplicate(e) ? "이미 있는 쿠폰 번호예요." : "저장 중 문제가 생겼어요." };
   }
@@ -126,4 +127,32 @@ export async function clearErrors() {
   await requireAdmin();
   await prisma.errorLog.deleteMany({});
   redirect("/admin/errors");
+}
+
+export async function saveFaq(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin("/admin/faq");
+  const id = Number(String(formData.get("id") ?? "")) || 0;
+  const category = String(formData.get("category") ?? "");
+  const question = String(formData.get("question") ?? "").trim();
+  const answer = String(formData.get("answer") ?? "").trim();
+  const position = Number(formData.get("position") || 0);
+  if (!FAQ_CATEGORIES.includes(category)) return { error: "분류를 선택해 주세요." };
+  if (!question || question.length > 200) return { error: "질문을 200자 이하로 입력해 주세요." };
+  if (!answer || answer.length > 3000) return { error: "답변을 3000자 이하로 입력해 주세요." };
+  if (!Number.isInteger(position) || position < 0 || position > 9999) return { error: "순서는 0~9999 사이의 숫자로 입력해 주세요." };
+  try {
+    if (id) await prisma.faq.update({ where: { id }, data: { category, question, answer, position } });
+    else await prisma.faq.create({ data: { category, question, answer, position } });
+  } catch (e) {
+    console.error("FAQ 저장 실패:", e);
+    return { error: "저장 중 문제가 생겼어요." };
+  }
+  redirect("/admin/faq");
+}
+
+export async function deleteFaq(formData: FormData) {
+  await requireAdmin();
+  const id = num(formData, "id");
+  if (Number.isInteger(id)) await prisma.faq.deleteMany({ where: { id } });
+  redirect("/admin/faq");
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import { prisma } from "@/lib/db";
+import { CARD_SELECT } from "@/lib/products";
 import { requireUser } from "@/lib/auth";
 import { removeFromWishlist } from "@/app/actions/wishlist";
 import { groupStock, soldOutOf } from "@/lib/stock";
@@ -10,7 +11,7 @@ export const metadata = { title: "관심 상품" };
 
 export default async function Page() {
   const user = await requireUser("/wishlist");
-  const items = await prisma.wishlistItem.findMany({ where: { userId: user.id }, include: { product: true }, orderBy: { createdAt: "desc" } });
+  const items = await prisma.wishlistItem.findMany({ where: { userId: user.id }, include: { product: { select: CARD_SELECT } }, orderBy: { createdAt: "desc" } });
   const stocks = groupStock(await prisma.productStock.findMany({ where: { productId: { in: items.map((i) => i.productId) } } }).catch(() => []));
 
   return (

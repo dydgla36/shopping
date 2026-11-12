@@ -6,6 +6,7 @@ import { safeNext } from "@/lib/redirect";
 import { formatPhone, phoneOk } from "@/lib/validate";
 import { clearLimit, clientIp, lockedSeconds, recordFailure } from "@/lib/rateLimit";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
+import { issueSignupCoupons } from "@/lib/welcome";
 
 export type FormState = { error?: string } | undefined;
 
@@ -50,6 +51,7 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
       select: { id: true },
     });
     userId = user.id;
+    await issueSignupCoupons(userId);
     await createSession(userId, 1);
   } catch (e) {
     console.error("회원가입 실패:", e);

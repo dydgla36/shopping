@@ -3,17 +3,13 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin";
 import { updateOrder } from "@/app/actions/admin";
-import { STATUS_LABEL, fmtDate, fullAddress, itemOption, won } from "@/lib/orders";
+import { confirmDeposit } from "@/app/actions/admin";
+import { STATUS_LABEL, fmtDate, fmtDateTime, fullAddress, itemOption, won } from "@/lib/orders";
 import { emailConfigured } from "@/lib/email";
 import { btnDark, h2, input, notice } from "../../styles";
+import { Row, Title, line } from "@/components/InfoRows";
+import { CARRIERS } from "@/lib/carriers";
 
-const line = { display: "flex", justifyContent: "space-between", gap: 20, padding: "14px 0", borderBottom: "1px solid #e5e5e5", fontSize: 14 } as const;
-const Row = ({ a, b }: { a: string; b: React.ReactNode }) => (
-  <div style={line}><span style={{ color: "#767676", flexShrink: 0 }}>{a}</span><span style={{ textAlign: "right" }}>{b}</span></div>
-);
-const Title = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ marginTop: 36, paddingBottom: 14, borderBottom: "1px solid #111", font: "800 16px Archivo,'Noto Sans KR',sans-serif" }}>{children}</div>
-);
 
 export default async function Page({ params, searchParams }: { params: Promise<{ no: string }>; searchParams: Promise<{ saved?: string; error?: string }> }) {
   const { no: raw } = await params;
@@ -39,6 +35,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </div>
       )}
 
+      {order.status === "PENDING" && (
+        <div role="status" style={{ marginTop: 16, padding: "16px 20px", background: "#fff8e6", border: "1px solid #e8d9a8", fontSize: 14, lineHeight: 1.9 }}>
+          <b>입금 대기 중이에요</b> · 입금자명 {order.depositorName ?? "-"} · 입금 금액 {won(order.total)}{order.depositDeadline && <> · 기한 {fmtDateTime(order.depositDeadline)}</>}
+          <form action={confirmDeposit} style={{ marginTop: 10 }}>
+            <input type="hidden" name="orderNumber" value={order.orderNumber} />
+            <button type="submit" style={btnDark}>입금 확인 (결제 완료로 변경)</button>
+          </form>
+        </div>
+      )}
+      <div style={{ marginTop: 16 }}><a href={`/admin/print?nos=${encodeURIComponent(order.orderNumber)}`} target="_blank" rel="noopener noreferrer" style={{ borderBottom: "1px solid #111", fontSize: 13 }}>주문서·송장 인쇄</a></div>
       <Title>배송 처리</Title>
       <p style={{ margin: "12px 0 0", fontSize: 12, color: emailConfigured() ? "#2d6a2d" : "#767676" }}>이메일 알림: {emailConfigured() ? "켜짐 — 상태를 발송 중·배송 완료·취소로 바꾸면 고객에게 메일이 가요." : "꺼짐 (이메일 서비스가 설정되지 않았어요)"}</p>
       <form action={updateOrder} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginTop: 18, alignItems: "end" }}>
@@ -49,7 +55,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </select>
         </label>
         <label style={{ fontSize: 12, color: "#767676" }}>택배사
-          <input name="carrier" defaultValue={order.carrier ?? ""} placeholder="예: [택배사]" style={{ ...input, marginTop: 6 }} />
+          <input name="carrier" list="carriers" defaultValue={order.carrier ?? ""} placeholder="목록에서 고르거나 직접 입력" style={{ ...input, marginTop: 6 }} />
+          <datalist id="carriers">{CARRIERS.map((c) => <option key={c.id} value={c.name} />)}</datalist>
         </label>
         <label style={{ fontSize: 12, color: "#767676" }}>운송장 번호
           <input name="trackingNumber" defaultValue={order.trackingNumber ?? ""} placeholder="운송장 번호" style={{ ...input, marginTop: 6 }} />

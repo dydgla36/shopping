@@ -1,5 +1,6 @@
 import ProductCard from "@/components/ProductCard";
 import { prisma } from "@/lib/db";
+import { CARD_SELECT } from "@/lib/products";
 import { groupStock, soldOutOf } from "@/lib/stock";
 import { priceView } from "@/lib/orders";
 import { darkBtn, narrowTitle } from "@/lib/ui";
@@ -13,6 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
         where: { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }] },
         orderBy: [{ category: "asc" }, { position: "asc" }],
         take: 40,
+        select: CARD_SELECT,
       })
     : [];
   const stocks = groupStock(products.length ? await prisma.productStock.findMany({ where: { productId: { in: products.map((p) => p.id) } } }).catch(() => []) : []);

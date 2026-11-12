@@ -6,6 +6,7 @@ import { createSession, hashPassword } from "@/lib/auth";
 import { siteBase } from "@/lib/email";
 import { isDuplicate } from "@/lib/errors";
 import { safeNext } from "@/lib/redirect";
+import { issueSignupCoupons } from "@/lib/welcome";
 
 type KakaoMe = {
   id: number;
@@ -50,8 +51,10 @@ export async function GET(req: Request) {
 
   const kakaoId = String(me.id);
   let userId: number | null = null;
+  let isNew = false;
   try {
     const found = await prisma.user.findUnique({ where: { kakaoId }, select: { id: true } });
+    isNew = !found; // 처음 로그인하는 카카오 회원이면 가입 쿠폰을 줍니다.
     if (found) {
       userId = found.id;
     } else {
@@ -67,6 +70,7 @@ export async function GET(req: Request) {
         userId = (await prisma.user.create({ data: { ...base, email: `kakao_${kakaoId}@kakao.local` }, select: { id: true } })).id;
       }
     }
+    if (isNew) await issueSignupCoupons(userId);
     await createSession(userId, 30);
   } catch (e) {
     console.error("카카오 회원 처리 실패:", e);

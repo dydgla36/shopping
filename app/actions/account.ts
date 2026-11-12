@@ -9,6 +9,7 @@ import { emailConfigured, sendEmail } from "@/lib/email";
 import { maskLoginId } from "@/lib/mask";
 import { emailOk, formatPhone, passwordProblem, phoneOk } from "@/lib/validate";
 import { isDuplicate } from "@/lib/errors";
+import { internalImageIds } from "@/lib/imageRefs";
 import { clientIp, hit } from "@/lib/rateLimit";
 import type { ActionState } from "@/components/ActionForm";
 
@@ -134,7 +135,7 @@ export async function withdrawAccount(_prev: ActionState, formData: FormData): P
   try {
     await prisma.$transaction(async (tx) => {
       const reviews = await tx.review.findMany({ where: { userId: user.id }, select: { photos: true } });
-      const photoIds = reviews.flatMap((r) => r.photos).map((u) => /^\/api\/product-image\/([A-Za-z0-9_-]{10,40})$/.exec(u)?.[1]).filter((x): x is string => Boolean(x));
+      const photoIds = internalImageIds(reviews.flatMap((r) => r.photos));
       if (photoIds.length > 0) await tx.productImage.deleteMany({ where: { id: { in: photoIds } } });
       await Promise.all([
         tx.session.deleteMany({ where: { userId: user.id } }),

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { randomInt } from "node:crypto";
 import { prisma } from "@/lib/db";
+import { BANK, DEPOSIT_HOURS, PAYMENT_METHODS } from "@/lib/business";
 import { formatPhone, phoneOk } from "@/lib/validate";
 import { getCurrentUser } from "@/lib/auth";
 import { MAX_ADDRESSES, shippingFeeFor } from "@/lib/orders";
@@ -14,8 +15,6 @@ import { clientIp, hit } from "@/lib/rateLimit";
 import type { FormState } from "@/app/actions/auth";
 
 class CheckoutError extends Error {}
-
-const PAYMENTS = ["신용카드", "계좌이체", "무통장입금", "카카오페이"];
 
 export async function createOrder(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await getCurrentUser(); // 로그인하지 않았다면 비회원 주문입니다.
@@ -31,11 +30,13 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   const addressDetail = s("addressDetail");
   const deliveryMemo = s("deliveryMemo");
   const paymentMethod = s("pay");
+  const depositorName = s("depositorName").slice(0, 20);
 
   if (!ordererName || !ordererPhone || !ordererEmail) return { error: "주문자 정보를 모두 입력해 주세요." };
   if (!phoneOk(ordererPhone) || !phoneOk(recipientPhone)) return { error: "휴대전화·연락처 번호를 확인해 주세요. (숫자 9~11자리)" };
   if (!recipientName || !recipientPhone || !address) return { error: "배송 정보(수령인, 연락처, 주소)를 입력해 주세요." };
-  if (!PAYMENTS.includes(paymentMethod)) return { error: "결제 수단을 선택해 주세요." };
+  if (!PAYMENT_METHODS.includes(paymentMethod)) return { error: "결제 수단을 선택해 주세요." };
+  if (!depositorName) return { error: "입금자명을 입력해 주세요." };
   if (formData.get("agree") !== "on") return { error: "주문 내용 확인 및 결제 동의에 체크해 주세요." };
 
   // 비회원은 상품 상세의 BUY NOW 주문만 할 수 있고(장바구니는 로그인 필요), 짧은 시간에 너무 많이 주문할 수 없습니다.
@@ -56,6 +57,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const orderNumber = `G${ymd}-${randomInt(10000, 100000)}`;
   const guestToken = user ? null : newGuestToken();
+  const depositDeadline = new Date(Date.now() + DEPOSIT_HOURS * 3600 * 1000); // 이 시간까지 입금이 없으면 자동 취소
 
   let total: number;
   try {
@@ -99,6 +101,8 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
           guestToken,
           status: "PENDING", // 실제 결제 연동이 없어서 '주문 접수' 상태로 저장합니다.
           paymentMethod,
+          depositorName,
+          depositDeadline,
           itemsTotal,
           shippingFee,
           discount,
@@ -149,6 +153,7 @@ export async function createOrder(_prev: FormState, formData: FormData): Promise
   // 주문 접수 알림 메일 (이메일 서비스가 설정되어 있을 때만, 실패해도 주문은 그대로 유지)
   await notifyOrder("placed", {
     orderNumber, ordererName, ordererEmail, total, paymentMethod, carrier: null, trackingNumber: null, guestToken,
+    deposit: { bank: BANK.name, account: BANK.account, holder: BANK.holder, depositor: depositorName, deadline: depositDeadline },
     items: lines.map((i) => ({ name: i.name, quantity: i.quantity, size: i.size })),
   });
   redirect(user ? `/order-complete?no=${orderNumber}` : `/order-complete?no=${orderNumber}&t=${guestToken}`);

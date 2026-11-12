@@ -1,6 +1,7 @@
 import Link from "next/link";
 import HomeRow from "@/components/HomeRow";
 import { prisma } from "@/lib/db";
+import { thumb } from "@/lib/imageUrl";
 import { lists } from "@/lib/lists";
 import { getListProducts } from "@/lib/products";
 import { maskName } from "@/lib/mask";
@@ -62,7 +63,7 @@ export default async function Page() {
           <Link key={slug} href={`/list/${slug}`} className="tile" aria-label={`${lists[slug]?.title} 보기`}>
             {img && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={img} alt="" loading="lazy" />
+              <img src={thumb(img, 800)} alt="" loading="lazy" />
             )}
             <div className={img ? "tile-label" : "tile-label dark"}>
               <b>{lists[slug]?.title}</b>

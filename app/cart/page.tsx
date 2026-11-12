@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { thumb } from "@/lib/imageUrl";
+import { CARD_SELECT } from "@/lib/products";
 import { requireUser } from "@/lib/auth";
 import { changeCartQty, removeFromCart } from "@/app/actions/cart";
 import { DISCOUNT, FREE_SHIPPING_MIN, shippingFeeFor, unitPrice, untilFreeShipping, won } from "@/lib/orders";
@@ -13,7 +15,7 @@ const row = { display: "flex", justifyContent: "space-between", marginTop: 14, f
 export default async function Page({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
   const { notice } = await searchParams;
   const user = await requireUser("/cart");
-  const items = await prisma.cartItem.findMany({ where: { userId: user.id }, include: { product: true }, orderBy: { id: "asc" } });
+  const items = await prisma.cartItem.findMany({ where: { userId: user.id }, include: { product: { select: CARD_SELECT } }, orderBy: { id: "asc" } });
   const itemsTotal = items.reduce((sum, i) => sum + unitPrice(i.product) * i.quantity, 0);
 
   // 담은 뒤 재고가 줄었거나 품절이 된 상품을 찾습니다. (재고 테이블이 없으면 확인하지 않음)
@@ -40,7 +42,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
               <Link href={`/product/${i.productId}`} style={{ display: "block", width: 96, aspectRatio: "4/5", background: i.product.bg, position: "relative", overflow: "hidden" }}>
                 {i.product.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={i.product.imageUrl} alt={i.product.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={thumb(i.product.imageUrl, 240)} alt={i.product.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
                 )}
               </Link>
               <div>
