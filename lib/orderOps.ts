@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
-import { EARN_REASON, POINT_RATE } from "@/lib/orders";
+import { gradeFor } from "@/lib/grades";
+import { EARN_REASON } from "@/lib/orders";
 
 type Tx = Prisma.TransactionClient;
 
@@ -31,10 +32,13 @@ export async function cancelOrderTx(tx: Tx, orderId: number, meta?: { by: "CUSTO
   await tx.order.update({ where: { id: orderId }, data: { status: "CANCELED", canceledAt: new Date(), canceledBy: meta?.by ?? null, cancelReason: meta?.reason ?? null } });
 }
 
-// 배송 완료 시 적립금 지급 (회원 주문만, 주문당 한 번만)
+// 배송 완료 시 적립금 지급 (회원 주문만, 주문당 한 번만, 등급별 적립률)
 export async function earnPointsTx(tx: Tx, order: { id: number; userId: number | null; orderNumber: string; total: number; shippingFee: number }) {
   if (order.userId === null) return;
-  const amount = Math.floor((order.total - order.shippingFee) * POINT_RATE);
+  // 적립률은 회원 등급(이전까지 배송 완료된 주문의 누적 구매 금액)에 따라 다릅니다.
+  const prior = await tx.order.aggregate({ where: { userId: order.userId, status: "DELIVERED", id: { not: order.id } }, _sum: { total: true, shippingFee: true } });
+  const spent = (prior._sum.total ?? 0) - (prior._sum.shippingFee ?? 0);
+  const amount = Math.floor((order.total - order.shippingFee) * gradeFor(spent).rate);
   if (amount <= 0) return;
   const exists = await tx.pointLog.findFirst({ where: { orderId: order.id, reason: { startsWith: EARN_REASON } }, select: { id: true } });
   if (exists) return;

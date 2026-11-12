@@ -6,6 +6,7 @@ import { startTransition, useActionState, useState } from "react";
 import AddressFields, { EMPTY_ADDRESS, type AddressInitial } from "@/components/AddressFields";
 import { createOrder } from "@/app/actions/order";
 import { couponDiscount, couponText, couponUsable } from "@/lib/coupons";
+import { BANK, DEPOSIT_HOURS, PAYMENT_METHODS } from "@/lib/business";
 import { FREE_SHIPPING_MIN, untilFreeShipping, won } from "@/lib/orders";
 
 type Item = { name: string; option: string; quantity: number; priceText: string; bg: string };
@@ -106,13 +107,18 @@ export default function CheckoutForm({ items, itemsTotal, shipping, balance, cou
 
         <div style={sec}>결제 수단</div>
         <div style={{ marginTop: 20 }}>
-          {["신용카드", "계좌이체", "무통장입금", "카카오페이"].map((m, i) => (
+          {PAYMENT_METHODS.map((m, i) => (
             <span key={m}>
               <input className="opt" type="radio" name="pay" id={`p${i}`} value={m} defaultChecked={i === 0} />
               <label htmlFor={`p${i}`}>{m}</label>
             </span>
           ))}
         </div>
+        <div style={{ marginTop: 16, padding: 16, background: "#f7f3ef", fontSize: 13, lineHeight: 1.8, color: "#444" }}>
+          주문 후 아래 계좌로 <b>{DEPOSIT_HOURS}시간 이내</b>에 입금해 주세요. 기한 안에 입금이 확인되지 않으면 주문이 자동으로 취소돼요.<br />
+          {BANK.name} {BANK.account} (예금주 {BANK.holder})
+        </div>
+        <label className="fld">입금자명<input name="depositorName" type="text" maxLength={20} defaultValue={defaults.name} placeholder="입금하실 분의 이름" required /></label>
         <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 32, fontSize: 13, color: "#333" }}>
           <input name="agree" type="checkbox" /> 주문 내용을 확인했으며 결제에 동의합니다
         </label>

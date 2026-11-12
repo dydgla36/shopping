@@ -6,12 +6,14 @@ import { usePathname } from "next/navigation";
 const items = [
   ["대시보드", "/admin"],
   ["주문 / 배송 관리", "/admin/orders"],
+  ["운송장 일괄 입력", "/admin/shipping"],
   ["통계 · 내보내기", "/admin/stats"],
   ["회원 관리", "/admin/members"],
   ["상품 관리", "/admin/products"],
   ["후기 관리", "/admin/reviews"],
   ["문의 관리", "/admin/qna"],
   ["공지 관리", "/admin/notices"],
+  ["FAQ 관리", "/admin/faq"],
   ["취소·반품·교환", "/admin/claims"],
   ["쿠폰 관리", "/admin/coupons"],
   ["오류 기록", "/admin/errors"],
@@ -22,7 +24,7 @@ const items = [
 export default function AdminNav() {
   const path = usePathname();
   return (
-    <nav style={{ borderTop: "1px solid #111", width: 200, flex: "none" }}>
+    <nav className="no-print" style={{ borderTop: "1px solid #111", width: 200, flex: "none" }}>
       {items.map(([label, href]) => {
         const on = href === "/admin" ? path === href : path.startsWith(href);
         return (

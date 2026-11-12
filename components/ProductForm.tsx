@@ -9,6 +9,8 @@ import { SUB_CATEGORIES } from "@/lib/categories";
 import { MAX_COLORS, parseColors, type ColorOption } from "@/lib/colors";
 import { DEFAULT_SIZES, MAX_SIZES, SIZE_PRESETS } from "@/lib/sizes";
 import { MAX_ORIGINAL, prepare, uploadImage } from "@/lib/imageClient";
+import DetailEditor from "@/components/DetailEditor";
+import SizeChartEditor from "@/components/SizeChartEditor";
 import { btnDark, input, notice } from "@/app/admin/styles";
 
 const COLORS = ["#e6e3de", "#ddd8d0", "#d6d6d6", "#dcdcdc", "#e8dcd2", "#d9e0e3"];
@@ -17,7 +19,7 @@ const MAX_EXTRA = 5; // 추가 이미지 최대 장수
 const smallBtn = { flex: 1, padding: "4px 0", border: "1px solid #ccc", background: "#fff", color: "#111", cursor: "pointer", fontSize: 12 } as const;
 const label = { display: "block", marginTop: 18, fontSize: 12, color: "#767676" } as const;
 
-export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; subCategory: string | null; inBest: boolean; inNew: boolean; soldOut: boolean; extraImages: string[]; colors: string[]; sizes: string[]; stock: Record<string, number> };
+export type ProductInit = { id: number; category: string; name: string; price: number; sale: string | null; position: number; bg: string; imageUrl: string | null; description: string | null; subCategory: string | null; inBest: boolean; inNew: boolean; soldOut: boolean; extraImages: string[]; colors: string[]; sizes: string[]; detailContent: string | null; sizeChart: string | null; stock: Record<string, number> };
 
 // 상품 추가(product 없음)와 상품 수정(product 있음)에 같이 씁니다.
 export default function ProductForm({ product }: { categories?: string[]; product?: ProductInit }) {
@@ -228,6 +230,7 @@ export default function ProductForm({ product }: { categories?: string[]; produc
             ))}
           </div>
         </fieldset>
+        <SizeChartEditor initial={product?.sizeChart ?? null} sizes={sizes} />
         <fieldset style={{ ...label, border: 0, padding: 0 }}>
           <legend style={{ padding: 0 }}>품절</legend>
           <label style={{ ...chipStyle(flags.soldOut), marginTop: 8 }}>
@@ -281,6 +284,7 @@ export default function ProductForm({ product }: { categories?: string[]; produc
         <label style={label}>상품 설명 (선택, 상품 상세 페이지에 보여요)
           <textarea name="description" value={v.description} onChange={set("description")} rows={6} maxLength={2000} style={{ ...input, marginTop: 6, resize: "vertical" }} />
         </label>
+        <DetailEditor initial={product?.detailContent ?? null} />
         {(formError || state?.error) && <div style={notice(false)} role="alert">{formError ?? state?.error}</div>}
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
           <button type="submit" disabled={pending} style={btnDark}>{pending ? "..." : product ? "SAVE" : "ADD PRODUCT"}</button>

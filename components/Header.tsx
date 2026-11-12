@@ -13,6 +13,7 @@ const info = [
   ["BRAND", "/about"],
   ["NOTICE", "/notice"],
   ["Q&A", "/qna"],
+  ["FAQ", "/faq"],
   ["REVIEW", "/review"],
 ];
 

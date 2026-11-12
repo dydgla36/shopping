@@ -1,4 +1,4 @@
-import type { Prisma, Product } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { lists, type Item } from "@/lib/lists";
 import { priceView, unitPrice } from "@/lib/orders";
@@ -16,6 +16,10 @@ function categoryWhere(slug: string): Prisma.ProductWhereInput {
   return { category: slug };
 }
 
+// 목록·카드에 필요한 컬럼만 읽습니다. (상품 상세 내용, 사이즈표 같은 큰 글은 읽지 않습니다)
+export const CARD_SELECT = { id: true, name: true, price: true, sale: true, bg: true, imageUrl: true, soldOut: true, sizes: true } satisfies Prisma.ProductSelect;
+type Row = Prisma.ProductGetPayload<{ select: typeof CARD_SELECT }>;
+
 const NEWEST: Prisma.ProductOrderByWithRelationInput[] = [{ createdAt: "desc" }, { id: "desc" }];
 
 // DB에서 카테고리별 상품을 읽어 분류 필터, 정렬, 페이지를 적용합니다.
@@ -25,14 +29,14 @@ export async function getListProducts(slug: string, { sub, sort = "new", page = 
   try {
     const where: Prisma.ProductWhereInput = sub ? { AND: [categoryWhere(slug), { subCategory: sub }] } : categoryWhere(slug);
     const clampPage = (total: number) => Math.min(Math.max(1, page), Math.max(1, Math.ceil(total / perPage)));
-    let rows: Product[];
+    let rows: Row[];
     let total: number;
 
     if (sort === "new") {
       total = await prisma.product.count({ where });
-      rows = await prisma.product.findMany({ where, orderBy: NEWEST, skip: (clampPage(total) - 1) * perPage, take: perPage });
+      rows = await prisma.product.findMany({ where, select: CARD_SELECT, orderBy: NEWEST, skip: (clampPage(total) - 1) * perPage, take: perPage });
     } else {
-      const all = await prisma.product.findMany({ where, orderBy: NEWEST, take: 500 });
+      const all = await prisma.product.findMany({ where, select: CARD_SELECT, orderBy: NEWEST, take: 500 });
       let ordered = all;
       if (sort === "popular") {
         // 인기순: 취소하지 않은 주문에서 많이 팔린 순서

@@ -1,7 +1,7 @@
 export const won = (n: number) => `₩${n.toLocaleString("ko-KR")}`;
 
 export const STATUS_LABEL: Record<string, string> = {
-  PENDING: "주문 접수",
+  PENDING: "입금 대기",
   PAID: "결제 완료",
   PREPARING: "배송 준비",
   SHIPPING: "배송 중",
@@ -26,7 +26,6 @@ export const SHIPPING_FEE = 3000; // 무료 조건에 못 미칠 때의 기본 �
 export const shippingFeeFor = (itemsTotal: number) => (itemsTotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE);
 // 무료 배송까지 남은 금액 (이미 무료거나 담은 상품이 없으면 0)
 export const untilFreeShipping = (itemsTotal: number) => (itemsTotal > 0 && itemsTotal < FREE_SHIPPING_MIN ? FREE_SHIPPING_MIN - itemsTotal : 0);
-export const POINT_RATE = 0.01; // 배송 완료 시 결제 금액의 1%를 적립금으로 줍니다.
 export const DISCOUNT = 0;
 
 export const CLAIM_TYPE: Record<string, string> = { CANCEL: "취소", RETURN: "반품", EXCHANGE: "교환" };
@@ -59,3 +58,14 @@ export const PHOTO_REVIEW_POINT = 1000;
 export const REVIEW_POINT_MIN_LENGTH = 20;
 export const REVIEW_REASON = "후기 적립";
 export const MAX_REVIEW_PHOTOS = 3;
+
+// 한국 시간 YYYY.MM.DD HH:mm
+export function fmtDateTime(d: Date) {
+  const p = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(d)
+    .reduce<Record<string, string>>((acc, x) => {
+      acc[x.type] = x.value;
+      return acc;
+    }, {});
+  return `${p.year}.${p.month}.${p.day} ${p.hour}:${p.minute}`;
+}

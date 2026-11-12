@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { thumb, thumbSet } from "@/lib/imageUrl";
 
 type Props = { id?: number; name: string; price: string; finalPrice?: string; bg?: string; sale?: string; imageUrl?: string; soldOut?: boolean };
 
@@ -9,7 +10,7 @@ export default function ProductCard({ id, name, price, finalPrice, bg = "#e6e3de
         {imageUrl && (
           // 관리자가 입력한 외부 이미지 주소를 그대로 보여줍니다.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={name} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          <img decoding="async" src={thumb(imageUrl, 480)} srcSet={thumbSet(imageUrl)} sizes="(max-width:700px) 50vw, 25vw" alt={name} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         )}
         {soldOut && (
           <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "8px 0", textAlign: "center", background: "rgba(17,17,17,.85)", color: "#fff", font: "700 12px Archivo,sans-serif", letterSpacing: ".1em" }}>SOLD OUT</span>

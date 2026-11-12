@@ -55,10 +55,10 @@ export default function SignupForm() {
         </label>
         <div style={{ marginTop: 12, borderTop: "1px solid #ddd" }} />
         <label style={row}>
-          <input name="terms" type="checkbox" checked={agree.terms} onChange={() => toggle("terms")} /> [필수] 이용약관 동의
+          <input name="terms" type="checkbox" checked={agree.terms} onChange={() => toggle("terms")} /> [필수] <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>이용약관</a> 동의
         </label>
         <label style={row}>
-          <input name="privacy" type="checkbox" checked={agree.privacy} onChange={() => toggle("privacy")} /> [필수] 개인정보 수집 및 이용 동의
+          <input name="privacy" type="checkbox" checked={agree.privacy} onChange={() => toggle("privacy")} /> [필수] <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>개인정보 수집 및 이용</a> 동의
         </label>
         <label style={row}>
           <input name="marketing" type="checkbox" checked={agree.marketing} onChange={() => toggle("marketing")} /> [선택] 마케팅 정보 수신 동의

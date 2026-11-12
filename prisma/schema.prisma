@@ -23,6 +23,8 @@ model Product {
   extraImages String[] @default([]) // 추가 이미지 (대표 이미지 외, 최대 5장)
   colors      String[] @default([]) // 색상 옵션 ("이름|#색상코드" 형태)
   sizes       String[] @default(["S", "M", "L"]) // 사이즈 옵션 (FREE 하나만 있는 상품도 가능)
+  detailContent String? // 상품 상세 내용 (글·이미지 블록을 JSON 글자로 저장)
+  sizeChart   String? // 사이즈표 (JSON 글자로 저장)
   restockAlerts RestockAlert[]
   sale      String?
   position  Int      @default(0)
@@ -35,6 +37,7 @@ model Product {
 
   @@unique([category, name])
   @@index([category, position])
+  @@index([category, createdAt])
 }
 
 // 회원 (회원가입 화면의 입력 항목과 맞춰 두었습니다)
@@ -100,6 +103,8 @@ model Order {
   userCouponId   Int? // 사용한 쿠폰 (취소하면 되돌려 줍니다)
   claims         Claim[]
   carrier        String? // 택배사
+  depositorName  String? // 무통장입금 입금자명
+  depositDeadline DateTime? // 입금 기한 (지나면 자동 취소)
   guestToken     String? // 비회원 주문 조회용 비밀 토큰 (주문 완료 화면·이메일의 링크에 들어갑니다)
   postcode       String? // 우편번호
   cancelReason   String? // 취소 사유 (고객이 취소할 때 적은 내용)
@@ -112,6 +117,8 @@ model Order {
   updatedAt      DateTime    @updatedAt
 
   @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
 }
 
 // 주문에 담긴 상품 (상품 하나 = 한 줄). 상품이 나중에 바뀌어도 주문 내역은 그대로 남도록 이름·가격을 복사해 둡니다.
@@ -128,6 +135,7 @@ model OrderItem {
   size      String?
 
   @@index([orderId])
+  @@index([productId])
 }
 
 // 상품 이미지 파일 (DB에 직접 저장). 상품의 imageUrl에는 "/api/product-image/이미지번호" 주소가 들어갑니다.
@@ -247,6 +255,7 @@ model Coupon {
   kind      String // PERCENT 정률(%) / AMOUNT 정액(원)
   value     Int
   minOrder  Int          @default(0)
+  autoIssue String? // SIGNUP: 회원가입 때 자동으로 받는 쿠폰
   expiresAt DateTime?
   active    Boolean      @default(true)
   createdAt DateTime     @default(now())
@@ -341,4 +350,14 @@ model ErrorLog {
   lastAt  DateTime @default(now())
 
   @@index([lastAt])
+}
+
+// 자주 묻는 질문
+model Faq {
+  id        Int      @id @default(autoincrement())
+  category  String   @default("기타")
+  question  String
+  answer    String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
 }

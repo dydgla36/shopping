@@ -73,5 +73,15 @@
   "CREATE UNIQUE INDEX IF NOT EXISTS \"RestockAlert_productId_size_email_key\" ON \"RestockAlert\"(\"productId\", \"size\", \"email\")",
   "CREATE TABLE IF NOT EXISTS \"ErrorLog\" (\"id\" SERIAL PRIMARY KEY, \"key\" TEXT NOT NULL, \"source\" TEXT NOT NULL, \"message\" TEXT NOT NULL, \"stack\" TEXT, \"path\" TEXT, \"count\" INTEGER NOT NULL DEFAULT 1, \"firstAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, \"lastAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)",
   "CREATE UNIQUE INDEX IF NOT EXISTS \"ErrorLog_key_key\" ON \"ErrorLog\"(\"key\")",
-  "CREATE INDEX IF NOT EXISTS \"ErrorLog_lastAt_idx\" ON \"ErrorLog\"(\"lastAt\")"
+  "CREATE INDEX IF NOT EXISTS \"ErrorLog_lastAt_idx\" ON \"ErrorLog\"(\"lastAt\")",
+  "ALTER TABLE \"Product\" ADD COLUMN IF NOT EXISTS \"detailContent\" TEXT",
+  "ALTER TABLE \"Product\" ADD COLUMN IF NOT EXISTS \"sizeChart\" TEXT",
+  "CREATE INDEX IF NOT EXISTS \"Product_category_createdAt_idx\" ON \"Product\"(\"category\", \"createdAt\")",
+  "CREATE INDEX IF NOT EXISTS \"OrderItem_productId_idx\" ON \"OrderItem\"(\"productId\")",
+  "CREATE INDEX IF NOT EXISTS \"Order_status_createdAt_idx\" ON \"Order\"(\"status\", \"createdAt\")",
+  "CREATE INDEX IF NOT EXISTS \"Order_createdAt_idx\" ON \"Order\"(\"createdAt\")",
+  "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"depositorName\" TEXT",
+  "ALTER TABLE \"Order\" ADD COLUMN IF NOT EXISTS \"depositDeadline\" TIMESTAMP(3)",
+  "ALTER TABLE \"Coupon\" ADD COLUMN IF NOT EXISTS \"autoIssue\" TEXT",
+  "CREATE TABLE IF NOT EXISTS \"Faq\" (\"id\" SERIAL PRIMARY KEY, \"category\" TEXT NOT NULL DEFAULT '기타', \"question\" TEXT NOT NULL, \"answer\" TEXT NOT NULL, \"position\" INTEGER NOT NULL DEFAULT 0, \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)"
 ]
